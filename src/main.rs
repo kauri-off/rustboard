@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
             get(|| async {
                 (
                     [("content-type", "text/plain")],
-                    "User-agent: *\nAllow: /$\nDisallow: /\n",
+                    "User-agent: *\nAllow: /$\nAllow: /boards$\nDisallow: /\n",
                 )
             }),
         )
