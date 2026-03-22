@@ -91,10 +91,7 @@ async fn main() -> anyhow::Result<()> {
     let bind_addr = state.config.bind_addr.clone();
 
     let app = Router::new()
-        .route(
-            "/",
-            get(|| async { axum::response::Redirect::permanent("/boards") }),
-        )
+        .route("/", get(routes::boards::board_list))
         .route(
             "/robots.txt",
             get(|| async {
