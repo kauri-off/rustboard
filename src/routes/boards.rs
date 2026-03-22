@@ -8,6 +8,7 @@ pub async fn board_list(State(state): State<Arc<AppState>>) -> Result<Html<Strin
     let html = BoardListTemplate {
         boards: state.boards.clone(),
         site_name: state.config.site_name.clone(),
+        site_url: state.config.site_url.clone(),
     }
     .render()
     .map_err(|e: askama::Error| AppError::Internal(e.into()))?;

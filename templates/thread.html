@@ -4,6 +4,12 @@
 {% if !thread.subject.is_empty() %}{{ thread.subject }} - {% endif %}
 /{{ board.slug }}/ - {{ site_name }}
 {% endblock %}
+{% block description %}{{ thread.content|truncate(160) }}{% endblock %}
+{% block og_title %}{% if !thread.subject.is_empty() %}{{ thread.subject }} - {% endif %}/{{ board.slug }}/ - {{ site_name }}{% endblock %}
+{% block og_description %}{{ thread.content|truncate(160) }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_url %}{% if !site_url.is_empty() %}<meta property="og:url" content="{{ site_url }}/{{ board.slug }}/{{ thread.id }}">{% endif %}{% endblock %}
+{% block og_image %}{% if !site_url.is_empty() %}<meta property="og:image" content="{{ site_url }}/{{ thread.image_path }}">{% endif %}{% endblock %}
 
 {% block content %}
 <div class="thread-nav">

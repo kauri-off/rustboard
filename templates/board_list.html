@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
 {% block title %}Boards - {{ site_name }}{% endblock %}
+{% block description %}Browse all boards on {{ site_name }}{% endblock %}
+{% block og_title %}Boards - {{ site_name }}{% endblock %}
+{% block og_description %}Browse all boards on {{ site_name }}{% endblock %}
+{% block og_url %}{% if !site_url.is_empty() %}<meta property="og:url" content="{{ site_url }}/boards">{% endif %}{% endblock %}
 
 {% block content %}
 <div class="board-list-page">

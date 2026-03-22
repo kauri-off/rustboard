@@ -1,6 +1,7 @@
 use askama::Template;
 use axum::{
     extract::{ConnectInfo, Multipart, Path, State},
+    http::HeaderMap,
     response::{Html, IntoResponse, Redirect, Response},
 };
 use std::{net::SocketAddr, sync::Arc};
@@ -10,7 +11,7 @@ use crate::{
     error::AppError,
     models::{Board, Thread},
     templates::BoardTemplate,
-    utils::{hash_ip, process_image},
+    utils::{hash_ip, process_image, real_ip},
 };
 
 pub async fn board_get(
@@ -25,6 +26,7 @@ pub async fn board_get(
         boards: state.boards.clone(),
         threads,
         site_name: state.config.site_name.clone(),
+        site_url: state.config.site_url.clone(),
         error: None,
     }
     .render()
@@ -37,11 +39,13 @@ pub async fn board_post(
     State(state): State<Arc<AppState>>,
     Path(slug): Path<String>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
     let board = fetch_board(&state, &slug).await?;
+    let client_ip = real_ip(&headers, &ConnectInfo(addr));
 
-    if !state.rate_limiter.check_and_record(&addr.ip().to_string()) {
+    if !state.rate_limiter.check_and_record(&client_ip) {
         return render_board_error(
             &state,
             board,
@@ -76,7 +80,7 @@ pub async fn board_post(
                     Some(e) => e,
                     None => {
                         image_result = Some(Err(
-                            "Invalid file type. Allowed: jpg, png, gif, webp".to_string(),
+                            "Invalid file type. Allowed: jpg, jpeg, png, gif, webp".to_string(),
                         ));
                         continue;
                     }
@@ -142,7 +146,7 @@ pub async fn board_post(
         return render_board_error(&state, board, "Thread must have a subject or comment").await;
     }
 
-    let ip_hash = hash_ip(&addr.ip().to_string(), &state.config.ip_salt);
+    let ip_hash = hash_ip(&client_ip, &state.config.ip_salt);
 
     let result = sqlx::query(
         "INSERT INTO threads (board_id, subject, content, image_path, ip_hash) VALUES (?, ?, ?, ?, ?)",
@@ -170,6 +174,7 @@ async fn render_board_error(
         boards: state.boards.clone(),
         threads,
         site_name: state.config.site_name.clone(),
+        site_url: state.config.site_url.clone(),
         error: Some(error_msg.to_string()),
     }
     .render()

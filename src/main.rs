@@ -9,9 +9,9 @@ mod utils;
 
 use std::{net::SocketAddr, sync::Arc};
 
-use axum::{Router, routing::get};
-use tower_http::{services::ServeDir, trace::TraceLayer};
-use tracing_subscriber::EnvFilter;
+use axum::{Router, extract::ConnectInfo, routing::get};
+use tower_http::{services::ServeDir, trace::{self, TraceLayer}};
+use tracing::Level;
 
 use config::AppConfig;
 use models::Board;
@@ -29,12 +29,41 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::from_default_env()
-                .add_directive("rustboard=info".parse()?)
-                .add_directive("tower_http=debug".parse()?),
-        )
+        .with_target(false)
+        .compact()
         .init();
+
+    let logging = TraceLayer::new_for_http()
+        .make_span_with(|request: &axum::http::Request<_>| {
+            let connect_ip = request
+                .extensions()
+                .get::<ConnectInfo<SocketAddr>>()
+                .map(|ci| ci.0.ip().to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            let ip = request
+                .headers()
+                .get("x-forwarded-for")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.split(',').next())
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    request
+                        .headers()
+                        .get("x-real-ip")
+                        .and_then(|v| v.to_str().ok())
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                })
+                .unwrap_or(connect_ip);
+            tracing::info_span!(
+                "request",
+                method = %request.method(),
+                uri = %request.uri(),
+                ip = %ip,
+            )
+        })
+        .on_response(trace::DefaultOnResponse::new().level(Level::INFO));
 
     let config = AppConfig::from_env()?;
 
@@ -77,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .nest_service("/uploads", ServeDir::new(&upload_dir))
         .nest_service("/static", ServeDir::new("static"))
-        .layer(TraceLayer::new_for_http())
+        .layer(logging)
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;

@@ -1,6 +1,31 @@
-use std::io::Cursor;
+use std::{io::Cursor, net::SocketAddr};
 
+use axum::{extract::ConnectInfo, http::HeaderMap};
 use sha2::{Digest, Sha256};
+
+/// Extracts the real client IP, preferring X-Forwarded-For / X-Real-IP headers
+/// set by a reverse proxy over the raw socket address.
+pub fn real_ip(headers: &HeaderMap, connect_info: &ConnectInfo<SocketAddr>) -> String {
+    if let Some(forwarded) = headers.get("x-forwarded-for") {
+        if let Ok(val) = forwarded.to_str() {
+            if let Some(first) = val.split(',').next() {
+                let ip = first.trim().to_string();
+                if !ip.is_empty() {
+                    return ip;
+                }
+            }
+        }
+    }
+    if let Some(real) = headers.get("x-real-ip") {
+        if let Ok(val) = real.to_str() {
+            let ip = val.trim().to_string();
+            if !ip.is_empty() {
+                return ip;
+            }
+        }
+    }
+    connect_info.0.ip().to_string()
+}
 
 pub fn hash_ip(ip: &str, salt: &str) -> String {
     let mut h = Sha256::new();

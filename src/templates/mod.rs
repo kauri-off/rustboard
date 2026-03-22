@@ -7,6 +7,7 @@ use crate::models::{Board, Post, Thread};
 pub struct BoardListTemplate {
     pub boards: Vec<Board>,
     pub site_name: String,
+    pub site_url: String,
 }
 
 #[derive(Template)]
@@ -16,6 +17,7 @@ pub struct BoardTemplate {
     pub boards: Vec<Board>,
     pub threads: Vec<Thread>,
     pub site_name: String,
+    pub site_url: String,
     pub error: Option<String>,
 }
 
@@ -27,5 +29,6 @@ pub struct ThreadTemplate {
     pub thread: Thread,
     pub posts: Vec<Post>,
     pub site_name: String,
+    pub site_url: String,
     pub error: Option<String>,
 }

@@ -1,6 +1,7 @@
 use askama::Template;
 use axum::{
     extract::{ConnectInfo, Multipart, Path, State},
+    http::HeaderMap,
     response::{Html, IntoResponse, Redirect, Response},
 };
 use std::{net::SocketAddr, sync::Arc};
@@ -10,7 +11,7 @@ use crate::{
     error::AppError,
     models::{Board, Post, Thread},
     templates::ThreadTemplate,
-    utils::{hash_ip, process_image},
+    utils::{hash_ip, process_image, real_ip},
 };
 
 pub async fn thread_get(
@@ -25,6 +26,7 @@ pub async fn thread_get(
         thread,
         posts,
         site_name: state.config.site_name.clone(),
+        site_url: state.config.site_url.clone(),
         error: None,
     }
     .render()
@@ -37,11 +39,13 @@ pub async fn thread_post(
     State(state): State<Arc<AppState>>,
     Path((slug, thread_id)): Path<(String, i64)>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
     let (board, thread, posts) = fetch_thread_data(&state, &slug, thread_id).await?;
+    let client_ip = real_ip(&headers, &ConnectInfo(addr));
 
-    if !state.rate_limiter.check_and_record(&addr.ip().to_string()) {
+    if !state.rate_limiter.check_and_record(&client_ip) {
         return render_thread_error(
             &state,
             board,
@@ -77,7 +81,7 @@ pub async fn thread_post(
                     Some(e) => e,
                     None => {
                         form_error =
-                            Some("Invalid file type. Allowed: jpg, png, gif, webp".to_string());
+                            Some("Invalid file type. Allowed: jpg, jpeg, png, gif, webp".to_string());
                         continue;
                     }
                 };
@@ -130,7 +134,7 @@ pub async fn thread_post(
         return render_thread_error(&state, board, thread, posts, "Reply must have content").await;
     }
 
-    let ip_hash = hash_ip(&addr.ip().to_string(), &state.config.ip_salt);
+    let ip_hash = hash_ip(&client_ip, &state.config.ip_salt);
 
     let result = sqlx::query(
         "INSERT INTO posts (thread_id, content, image_path, ip_hash) VALUES (?, ?, ?, ?)",
@@ -167,6 +171,7 @@ async fn render_thread_error(
         thread,
         posts,
         site_name: state.config.site_name.clone(),
+        site_url: state.config.site_url.clone(),
         error: Some(error_msg.to_string()),
     }
     .render()

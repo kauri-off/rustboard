@@ -34,6 +34,7 @@ All settings are optional and have defaults.
 | `UPLOAD_DIR`        | `./uploads`                | Directory for uploaded images      |
 | `BIND_ADDR`         | `0.0.0.0:3000`             | Address and port to listen on      |
 | `SITE_NAME`         | `Rustboard`                | Displayed site name                |
+| `SITE_URL`          | *(empty)*                  | Public base URL for OG/meta tags   |
 | `IP_SALT`           | `default-salt-change-me`   | Salt for hashing poster IPs        |
 | `MAX_IMAGE_BYTES`   | `5242880` (5 MB)           | Max upload size in bytes           |
 | `MAX_IMAGE_WIDTH`   | `10000`                    | Max image width in pixels          |
@@ -42,4 +43,4 @@ All settings are optional and have defaults.
 | `MAX_SUBJECT_CHARS` | `200`                      | Max subject line length            |
 | `MAX_CONTENT_CHARS` | `2000`                     | Max post body length               |
 
-Copy `.env.example` to `.env` (or export vars directly) to override defaults. **Change `IP_SALT` before deploying.**
+Copy `example.env` to `.env` (or export vars directly) to override defaults. **Change `IP_SALT` before deploying.**

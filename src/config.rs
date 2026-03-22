@@ -5,6 +5,7 @@ pub struct AppConfig {
     pub upload_dir: PathBuf,
     pub bind_addr: String,
     pub site_name: String,
+    pub site_url: String,
     pub ip_salt: String,
     pub max_image_bytes: usize,
     pub max_image_width: u32,
@@ -24,6 +25,7 @@ impl AppConfig {
             ),
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".to_string()),
             site_name: std::env::var("SITE_NAME").unwrap_or_else(|_| "Rustboard".to_string()),
+            site_url: std::env::var("SITE_URL").unwrap_or_default(),
             ip_salt: std::env::var("IP_SALT")
                 .unwrap_or_else(|_| "default-salt-change-me".to_string()),
             max_image_bytes: std::env::var("MAX_IMAGE_BYTES")

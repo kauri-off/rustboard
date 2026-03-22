@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ site_name }}{% endblock %}">
+  <meta property="og:site_name" content="{{ site_name }}">
+  <meta property="og:title" content="{% block og_title %}{{ site_name }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ site_name }}{% endblock %}">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  {% block og_url %}{% if !site_url.is_empty() %}<meta property="og:url" content="{{ site_url }}">{% endif %}{% endblock %}
+  {% block og_image %}{% endblock %}
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>

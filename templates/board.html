@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
 {% block title %}/{{ board.slug }}/ - {{ board.name }} - {{ site_name }}{% endblock %}
+{% block description %}{{ board.description }}{% endblock %}
+{% block og_title %}/{{ board.slug }}/ - {{ board.name }} - {{ site_name }}{% endblock %}
+{% block og_description %}{{ board.description }}{% endblock %}
+{% block og_url %}{% if !site_url.is_empty() %}<meta property="og:url" content="{{ site_url }}/{{ board.slug }}/">{% endif %}{% endblock %}
 
 {% block content %}
 <div class="board-header">
