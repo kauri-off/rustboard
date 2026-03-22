@@ -1,0 +1,17 @@
+<div class="post" id="post-{{ post.id }}">
+  <div class="post-header">
+    <span class="post-num">No.{{ post.id }}</span>
+    <span class="post-time">{{ post.created_at }}</span>
+    <span class="post-ip">{{ post.ip_hash }}</span>
+  </div>
+  {% match post.image_path %}
+  {% when Some(img) %}
+  <div class="post-image">
+    <a href="/{{ img }}" target="_blank">
+      <img src="/{{ img }}" alt="Post image" loading="lazy">
+    </a>
+  </div>
+  {% when None %}
+  {% endmatch %}
+  <div class="post-content">{{ post.content }}</div>
+</div>

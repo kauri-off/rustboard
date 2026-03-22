@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}/{{ board.slug }}/ - {{ board.name }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="board-header">
+  <h1>/{{ board.slug }}/ - {{ board.name }}</h1>
+  <p class="board-desc">{{ board.description }}</p>
+</div>
+
+<div class="new-post-form">
+  <details open>
+    <summary>New Thread</summary>
+    {% match error %}
+  {% when Some(err) %}
+    <div class="form-error">{{ err }}</div>
+  {% when None %}
+  {% endmatch %}
+    <form method="post" enctype="multipart/form-data" action="/{{ board.slug }}/">
+      <table class="form-table">
+        <tr>
+          <td><label for="subject">Subject</label></td>
+          <td><input type="text" id="subject" name="subject" maxlength="200" size="35"></td>
+        </tr>
+        <tr>
+          <td><label for="content">Comment</label></td>
+          <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000"></textarea></td>
+        </tr>
+        <tr>
+          <td><label for="image">Image <span class="required">*</span></label></td>
+          <td>
+            <input type="file" id="image" name="image"
+              accept="image/jpeg,image/png,image/gif,image/webp" required>
+            <span class="hint">jpg, png, gif, webp — max 5 MB</span>
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><button type="submit">Post</button></td>
+        </tr>
+      </table>
+    </form>
+  </details>
+</div>
+
+<hr>
+
+{% if threads.is_empty() %}
+<p class="no-content">No threads yet. Be the first to post!</p>
+{% else %}
+<div class="thread-catalog">
+  {% for thread in threads %}
+  <div class="catalog-thread">
+    <div class="catalog-image">
+      <a href="/{{ board.slug }}/{{ thread.id }}">
+        <img src="/{{ thread.image_path }}" alt="Thread image" loading="lazy">
+      </a>
+    </div>
+    <div class="catalog-info">
+      {% if thread.subject.len() > 0 %}
+      <div class="thread-subject">
+        <a href="/{{ board.slug }}/{{ thread.id }}">{{ thread.subject }}</a>
+      </div>
+      {% endif %}
+      <div class="thread-excerpt">{{ thread.content|truncate(120) }}</div>
+      <div class="thread-meta">
+        <a href="/{{ board.slug }}/{{ thread.id }}">
+          {{ thread.post_count }} post{% if thread.post_count != 1 %}s{% endif %}
+        </a>
+        — {{ thread.bump_at }}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

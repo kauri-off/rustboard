@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav>
+  <a href="/boards" class="site-title">{{ site_name }}</a>
+  <span class="board-links">
+    [
+    {% for board in boards %}
+    <a href="/{{ board.slug }}/">/{{ board.slug }}/</a>{% if !loop.last %} {% endif %}
+    {% endfor %}
+    ]
+  </span>
+</nav>
+
+<div class="page">
+{% block content %}{% endblock %}
+</div>
+
+<footer>
+  <p>{{ site_name }}</p>
+</footer>
+</body>
+</html>

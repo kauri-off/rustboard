@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Boards - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="board-list-page">
+  <h1>Boards</h1>
+  <table class="board-table">
+    <thead>
+      <tr>
+        <th>Board</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for board in boards %}
+      <tr>
+        <td><a href="/{{ board.slug }}/">/{{ board.slug }}/</a></td>
+        <td>{{ board.name }}</td>
+        <td>{{ board.description }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

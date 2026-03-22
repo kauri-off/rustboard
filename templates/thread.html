@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if !thread.subject.is_empty() %}{{ thread.subject }} - {% endif %}
+/{{ board.slug }}/ - {{ site_name }}
+{% endblock %}
+
+{% block content %}
+<div class="thread-nav">
+  <a href="/{{ board.slug }}/">[Return]</a>
+</div>
+
+<div class="thread">
+  <!-- OP post -->
+  <div class="post op-post" id="post-{{ thread.id }}">
+    <div class="post-header">
+      {% if thread.subject.len() > 0 %}
+      <span class="post-subject">{{ thread.subject }}</span>
+      {% endif %}
+      <span class="post-num">No.{{ thread.id }}</span>
+      <span class="post-time">{{ thread.created_at }}</span>
+      <span class="post-ip">{{ thread.ip_hash }}</span>
+    </div>
+    <div class="post-image op-image">
+      <a href="/{{ thread.image_path }}" target="_blank">
+        <img src="/{{ thread.image_path }}" alt="OP image">
+      </a>
+    </div>
+    <div class="post-content">{{ thread.content }}</div>
+  </div>
+
+  <!-- Replies -->
+  {% for post in posts %}
+  {% include "_post.html" %}
+  {% endfor %}
+</div>
+
+<div class="reply-form">
+  <h3>Reply</h3>
+  {% match error %}
+  {% when Some(err) %}
+  <div class="form-error">{{ err }}</div>
+  {% when None %}
+  {% endmatch %}
+  <form method="post" enctype="multipart/form-data" action="/{{ board.slug }}/{{ thread.id }}">
+    <table class="form-table">
+      <tr>
+        <td><label for="content">Comment</label></td>
+        <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000" required></textarea></td>
+      </tr>
+      <tr>
+        <td><label for="image">Image</label></td>
+        <td>
+          <input type="file" id="image" name="image"
+            accept="image/jpeg,image/png,image/gif,image/webp">
+          <span class="hint">Optional — jpg, png, gif, webp — max 5 MB</span>
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><button type="submit">Post Reply</button></td>
+      </tr>
+    </table>
+  </form>
+</div>
+{% endblock %}

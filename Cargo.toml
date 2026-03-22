@@ -1,0 +1,21 @@
+[package]
+name = "rustboard"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio              = { version = "1",    features = ["full"] }
+axum               = { version = "0.8",  features = ["multipart"] }
+tower-http         = { version = "0.6",  features = ["fs", "trace"] }
+askama             = "0.12"
+sqlx               = { version = "0.8",  features = ["sqlite", "runtime-tokio", "chrono", "migrate"] }
+serde              = { version = "1",    features = ["derive"] }
+anyhow             = "1"
+sha2               = "0.10"
+hex                = "0.4"
+image              = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3",  features = ["env-filter"] }
+dotenvy            = "0.15"
+uuid               = { version = "1",    features = ["v4"] }
+chrono             = { version = "0.4",  features = ["serde"] }
