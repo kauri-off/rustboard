@@ -95,6 +95,15 @@ async fn main() -> anyhow::Result<()> {
             "/",
             get(|| async { axum::response::Redirect::permanent("/boards") }),
         )
+        .route(
+            "/robots.txt",
+            get(|| async {
+                (
+                    [("content-type", "text/plain")],
+                    "User-agent: *\nAllow: /$\nDisallow: /\n",
+                )
+            }),
+        )
         .route("/boards", get(routes::boards::board_list))
         .route(
             "/{slug}/",
