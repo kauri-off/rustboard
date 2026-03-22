@@ -1,6 +1,7 @@
 mod config;
 mod db;
 mod error;
+mod i18n;
 mod models;
 mod rate_limit;
 mod routes;
@@ -10,6 +11,7 @@ mod utils;
 use std::{net::SocketAddr, sync::Arc};
 
 use axum::{Router, extract::ConnectInfo, routing::get};
+use sha2::{Digest, Sha256};
 use tower_http::{services::ServeDir, trace::{self, TraceLayer}};
 use tracing::Level;
 
@@ -22,6 +24,7 @@ pub struct AppState {
     pub config: AppConfig,
     pub boards: Vec<Board>,
     pub rate_limiter: RateLimiter,
+    pub css_hash: String,
 }
 
 #[tokio::main]
@@ -79,18 +82,24 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Loaded {} boards", boards.len());
 
+    let css_bytes = tokio::fs::read("static/style.css").await.unwrap_or_default();
+    let css_hash = hex::encode(&Sha256::digest(&css_bytes)[..8]);
+    error::set_css_hash(css_hash.clone());
+
     let cooldown = config.post_cooldown_secs;
     let state = Arc::new(AppState {
         pool,
         config,
         boards,
         rate_limiter: RateLimiter::new(cooldown),
+        css_hash,
     });
 
     let upload_dir = state.config.upload_dir.clone();
     let bind_addr = state.config.bind_addr.clone();
 
     let app = Router::new()
+        .route("/set-lang", axum::routing::post(routes::lang::set_lang))
         .route("/", get(routes::boards::board_list))
         .route(
             "/robots.txt",

@@ -9,6 +9,7 @@ use std::{net::SocketAddr, sync::Arc};
 use crate::{
     AppState,
     error::AppError,
+    i18n::Translations,
     models::{Board, Thread},
     templates::BoardTemplate,
     utils::{hash_ip, process_image, real_ip},
@@ -17,7 +18,9 @@ use crate::{
 pub async fn board_get(
     State(state): State<Arc<AppState>>,
     Path(slug): Path<String>,
+    headers: HeaderMap,
 ) -> Result<Html<String>, AppError> {
+    let t = crate::i18n::lang_from_headers(&headers);
     let board = fetch_board(&state, &slug).await?;
     let threads = fetch_threads(&state, board.id).await?;
 
@@ -27,7 +30,9 @@ pub async fn board_get(
         threads,
         site_name: state.config.site_name.clone(),
         site_url: state.config.site_url.clone(),
+        css_hash: state.css_hash.clone(),
         error: None,
+        t,
     }
     .render()
     .map_err(|e: askama::Error| AppError::Internal(e.into()))?;
@@ -42,6 +47,7 @@ pub async fn board_post(
     headers: HeaderMap,
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
+    let t = crate::i18n::lang_from_headers(&headers);
     let board = fetch_board(&state, &slug).await?;
     let client_ip = real_ip(&headers, &ConnectInfo(addr));
 
@@ -50,6 +56,7 @@ pub async fn board_post(
             &state,
             board,
             "You are posting too fast. Please wait before trying again.",
+            t,
         )
         .await;
     }
@@ -118,10 +125,10 @@ pub async fn board_post(
     let image_path = match image_result {
         Some(Ok(path)) => path,
         Some(Err(err_msg)) => {
-            return render_board_error(&state, board, &err_msg).await;
+            return render_board_error(&state, board, &err_msg, t).await;
         }
         None => {
-            return render_board_error(&state, board, "Thread requires an image").await;
+            return render_board_error(&state, board, "Thread requires an image", t).await;
         }
     };
 
@@ -130,6 +137,7 @@ pub async fn board_post(
             &state,
             board,
             &format!("Subject too long (max {} characters)", state.config.max_subject_chars),
+            t,
         )
         .await;
     }
@@ -138,12 +146,13 @@ pub async fn board_post(
             &state,
             board,
             &format!("Comment too long (max {} characters)", state.config.max_content_chars),
+            t,
         )
         .await;
     }
 
     if content.trim().is_empty() && subject.trim().is_empty() {
-        return render_board_error(&state, board, "Thread must have a subject or comment").await;
+        return render_board_error(&state, board, "Thread must have a subject or comment", t).await;
     }
 
     let ip_hash = hash_ip(&client_ip, &state.config.ip_salt);
@@ -167,6 +176,7 @@ async fn render_board_error(
     state: &AppState,
     board: Board,
     error_msg: &str,
+    t: &'static Translations,
 ) -> Result<Response, AppError> {
     let threads = fetch_threads(state, board.id).await?;
     let html = BoardTemplate {
@@ -175,7 +185,9 @@ async fn render_board_error(
         threads,
         site_name: state.config.site_name.clone(),
         site_url: state.config.site_url.clone(),
+        css_hash: state.css_hash.clone(),
         error: Some(error_msg.to_string()),
+        t,
     }
     .render()
     .map_err(|e: askama::Error| AppError::Internal(e.into()))?;

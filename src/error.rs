@@ -3,6 +3,19 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
+use std::sync::OnceLock;
+
+use crate::i18n::Translations;
+
+static CSS_HASH: OnceLock<String> = OnceLock::new();
+
+pub fn set_css_hash(hash: String) {
+    CSS_HASH.set(hash).ok();
+}
+
+fn css_hash() -> &'static str {
+    CSS_HASH.get().map(|s| s.as_str()).unwrap_or("")
+}
 
 #[derive(Template)]
 #[template(path = "error.html")]
@@ -10,6 +23,8 @@ struct ErrorTemplate {
     status: u16,
     message: String,
     site_name: String,
+    css_hash: &'static str,
+    t: &'static Translations,
 }
 
 #[derive(Debug)]
@@ -35,6 +50,8 @@ impl IntoResponse for AppError {
             status,
             message,
             site_name: "Rustboard".to_string(),
+            css_hash: css_hash(),
+            t: &crate::i18n::EN,
         };
 
         let body = tmpl

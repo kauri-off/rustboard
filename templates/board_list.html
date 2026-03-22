@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Boards - {{ site_name }}{% endblock %}
-{% block description %}Browse all boards on {{ site_name }}{% endblock %}
-{% block og_title %}Boards - {{ site_name }}{% endblock %}
-{% block og_description %}Browse all boards on {{ site_name }}{% endblock %}
+{% block title %}{{ t.boards }} - {{ site_name }}{% endblock %}
+{% block description %}{{ t.boards }} - {{ site_name }}{% endblock %}
+{% block og_title %}{{ t.boards }} - {{ site_name }}{% endblock %}
+{% block og_description %}{{ t.boards }} - {{ site_name }}{% endblock %}
 {% block og_url %}{% if !site_url.is_empty() %}<meta property="og:url" content="{{ site_url }}">{% endif %}{% endblock %}
 
 {% block content %}
 <div class="board-list-page">
-  <h1>Boards</h1>
+  <h1>{{ t.boards }}</h1>
   <table class="board-table">
     <thead>
       <tr>
-        <th>Board</th>
-        <th>Name</th>
-        <th>Description</th>
+        <th>{{ t.board_col }}</th>
+        <th>{{ t.name_col }}</th>
+        <th>{{ t.description_col }}</th>
       </tr>
     </thead>
     <tbody>

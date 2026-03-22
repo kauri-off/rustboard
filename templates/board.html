@@ -14,7 +14,7 @@
 
 <div class="new-post-form">
   <details open>
-    <summary>New Thread</summary>
+    <summary>{{ t.new_thread }}</summary>
     {% match error %}
   {% when Some(err) %}
     <div class="form-error">{{ err }}</div>
@@ -23,15 +23,15 @@
     <form method="post" enctype="multipart/form-data" action="/{{ board.slug }}/">
       <table class="form-table">
         <tr>
-          <td><label for="subject">Subject</label></td>
+          <td><label for="subject">{{ t.subject }}</label></td>
           <td><input type="text" id="subject" name="subject" maxlength="200" size="35"></td>
         </tr>
         <tr>
-          <td><label for="content">Comment</label></td>
+          <td><label for="content">{{ t.comment }}</label></td>
           <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000"></textarea></td>
         </tr>
         <tr>
-          <td><label for="image">Image <span class="required">*</span></label></td>
+          <td><label for="image">{{ t.image }} <span class="required">*</span></label></td>
           <td>
             <input type="file" id="image" name="image"
               accept="image/jpeg,image/png,image/gif,image/webp" required>
@@ -40,7 +40,7 @@
         </tr>
         <tr>
           <td></td>
-          <td><button type="submit">Post</button></td>
+          <td><button type="submit">{{ t.post_btn }}</button></td>
         </tr>
       </table>
     </form>
@@ -50,7 +50,7 @@
 <hr>
 
 {% if threads.is_empty() %}
-<p class="no-content">No threads yet. Be the first to post!</p>
+<p class="no-content">{{ t.no_threads }}</p>
 {% else %}
 <div class="thread-catalog">
   {% for thread in threads %}
@@ -69,7 +69,8 @@
       <div class="thread-excerpt">{{ thread.content|truncate(120) }}</div>
       <div class="thread-meta">
         <a href="/{{ board.slug }}/{{ thread.id }}">
-          {{ thread.post_count }} post{% if thread.post_count != 1 %}s{% endif %}
+          {{ thread.post_count }}
+          {% if t.lang_code == "ru" %}{{ thread.post_count|ru_post_form }}{% else %}post{% if thread.post_count != 1 %}s{% endif %}{% endif %}
         </a>
         — {{ thread.bump_at }}
       </div>

@@ -35,6 +35,18 @@ nav a { color: var(--nav-fg); text-decoration: none; }
 nav a:hover { text-decoration: underline; }
 .site-title { font-weight: bold; font-size: 16px; }
 .board-links { font-size: 13px; }
+.board-link { padding: 2px 4px; }
+.lang-switcher { margin-left: auto; display: flex; gap: 4px; }
+.lang-switcher button {
+  background: none;
+  border: 1px solid var(--nav-fg);
+  color: var(--nav-fg);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.lang-switcher button:hover { background: rgba(255,255,255,0.2); }
 
 /* Layout */
 .page {

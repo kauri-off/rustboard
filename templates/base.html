@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ t.lang_code }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,7 +11,7 @@
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
   {% block og_url %}{% if !site_url.is_empty() %}<meta property="og:url" content="{{ site_url }}">{% endif %}{% endblock %}
   {% block og_image %}{% endblock %}
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v={{ css_hash }}">
 </head>
 <body>
 <nav>
@@ -19,10 +19,14 @@
   <span class="board-links">
     [
     {% for board in boards %}
-    <a href="/{{ board.slug }}/">/{{ board.slug }}/</a>{% if !loop.last %} {% endif %}
+    <a href="/{{ board.slug }}/" class="board-link">/{{ board.slug }}/</a>{% if !loop.last %} {% endif %}
     {% endfor %}
     ]
   </span>
+  <form method="post" action="/set-lang" class="lang-switcher">
+    <button type="submit" name="lang" value="en">[en]</button>
+    <button type="submit" name="lang" value="ru">[ru]</button>
+  </form>
 </nav>
 
 <div class="page">
@@ -31,7 +35,7 @@
 
 <footer>
   <p>{{ site_name }}</p>
-  <p>Powered by <strong>Rust</strong></p>
+  <p>{{ t.powered_by }} <strong>Rust</strong></p>
 </footer>
 </body>
 </html>

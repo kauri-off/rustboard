@@ -13,7 +13,7 @@
 
 {% block content %}
 <div class="thread-nav">
-  <a href="/{{ board.slug }}/">[Return]</a>
+  <a href="/{{ board.slug }}/">{{ t.return_link }}</a>
 </div>
 
 <div class="thread">
@@ -42,7 +42,7 @@
 </div>
 
 <div class="reply-form">
-  <h3>Reply</h3>
+  <h3>{{ t.reply_heading }}</h3>
   {% match error %}
   {% when Some(err) %}
   <div class="form-error">{{ err }}</div>
@@ -51,20 +51,20 @@
   <form method="post" enctype="multipart/form-data" action="/{{ board.slug }}/{{ thread.id }}">
     <table class="form-table">
       <tr>
-        <td><label for="content">Comment</label></td>
+        <td><label for="content">{{ t.comment }}</label></td>
         <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000" required></textarea></td>
       </tr>
       <tr>
-        <td><label for="image">Image</label></td>
+        <td><label for="image">{{ t.image }}</label></td>
         <td>
           <input type="file" id="image" name="image"
             accept="image/jpeg,image/png,image/gif,image/webp">
-          <span class="hint">Optional — jpg, png, gif, webp — max 5 MB</span>
+          <span class="hint">{{ t.optional }} — jpg, png, gif, webp — max 5 MB</span>
         </td>
       </tr>
       <tr>
         <td></td>
-        <td><button type="submit">Post Reply</button></td>
+        <td><button type="submit">{{ t.post_reply_btn }}</button></td>
       </tr>
     </table>
   </form>

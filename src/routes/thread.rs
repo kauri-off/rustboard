@@ -9,6 +9,7 @@ use std::{net::SocketAddr, sync::Arc};
 use crate::{
     AppState,
     error::AppError,
+    i18n::Translations,
     models::{Board, Post, Thread},
     templates::ThreadTemplate,
     utils::{hash_ip, process_image, real_ip},
@@ -17,7 +18,9 @@ use crate::{
 pub async fn thread_get(
     State(state): State<Arc<AppState>>,
     Path((slug, thread_id)): Path<(String, i64)>,
+    headers: HeaderMap,
 ) -> Result<Html<String>, AppError> {
+    let t = crate::i18n::lang_from_headers(&headers);
     let (board, thread, posts) = fetch_thread_data(&state, &slug, thread_id).await?;
 
     let html = ThreadTemplate {
@@ -27,7 +30,9 @@ pub async fn thread_get(
         posts,
         site_name: state.config.site_name.clone(),
         site_url: state.config.site_url.clone(),
+        css_hash: state.css_hash.clone(),
         error: None,
+        t,
     }
     .render()
     .map_err(|e: askama::Error| AppError::Internal(e.into()))?;
@@ -42,6 +47,7 @@ pub async fn thread_post(
     headers: HeaderMap,
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
+    let t = crate::i18n::lang_from_headers(&headers);
     let (board, thread, posts) = fetch_thread_data(&state, &slug, thread_id).await?;
     let client_ip = real_ip(&headers, &ConnectInfo(addr));
 
@@ -52,6 +58,7 @@ pub async fn thread_post(
             thread,
             posts,
             "You are posting too fast. Please wait before trying again.",
+            t,
         )
         .await;
     }
@@ -116,7 +123,7 @@ pub async fn thread_post(
     }
 
     if let Some(err) = form_error {
-        return render_thread_error(&state, board, thread, posts, &err).await;
+        return render_thread_error(&state, board, thread, posts, &err, t).await;
     }
 
     if content.chars().count() > state.config.max_content_chars {
@@ -126,12 +133,13 @@ pub async fn thread_post(
             thread,
             posts,
             &format!("Comment too long (max {} characters)", state.config.max_content_chars),
+            t,
         )
         .await;
     }
 
     if content.trim().is_empty() {
-        return render_thread_error(&state, board, thread, posts, "Reply must have content").await;
+        return render_thread_error(&state, board, thread, posts, "Reply must have content", t).await;
     }
 
     let ip_hash = hash_ip(&client_ip, &state.config.ip_salt);
@@ -164,6 +172,7 @@ async fn render_thread_error(
     thread: Thread,
     posts: Vec<Post>,
     error_msg: &str,
+    t: &'static Translations,
 ) -> Result<Response, AppError> {
     let html = ThreadTemplate {
         board,
@@ -172,7 +181,9 @@ async fn render_thread_error(
         posts,
         site_name: state.config.site_name.clone(),
         site_url: state.config.site_url.clone(),
+        css_hash: state.css_hash.clone(),
         error: Some(error_msg.to_string()),
+        t,
     }
     .render()
     .map_err(|e: askama::Error| AppError::Internal(e.into()))?;
