@@ -19,6 +19,7 @@ use std::{
 use axum::{Router, extract::ConnectInfo, routing::get};
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, RwLock};
+use axum::http::{HeaderName, HeaderValue};
 use tower_http::{services::ServeDir, trace::{self, TraceLayer}};
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
@@ -145,7 +146,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/posts/{id}/delete", axum::routing::post(routes::admin::post_delete))
         .route("/admin/settings", get(routes::admin::settings_get).post(routes::admin::settings_post))
         .nest_service("/uploads", ServeDir::new(&upload_dir))
-        .nest_service("/static", ServeDir::new("static"))
+        .nest_service(
+            "/static",
+            tower_http::set_header::SetResponseHeader::overriding(
+                ServeDir::new("static"),
+                HeaderName::from_static("cache-control"),
+                HeaderValue::from_static("public, max-age=31536000, immutable"),
+            ),
+        )
         .layer(logging)
         .with_state(state);
 
