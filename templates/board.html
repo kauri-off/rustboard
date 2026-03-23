@@ -53,27 +53,43 @@
 <p class="no-content">{{ t.no_threads }}</p>
 {% else %}
 <div class="thread-catalog">
-  {% for thread in threads %}
+  {% for item in threads %}
   <div class="catalog-thread">
     <div class="catalog-image">
-      <a href="/{{ board.slug }}/{{ thread.id }}">
-        <img src="/{{ thread.image_path }}" alt="Thread image" loading="lazy">
+      <a href="/{{ board.slug }}/{{ item.thread.id }}">
+        <img src="/{{ item.thread.image_path }}" alt="Thread image" loading="lazy">
       </a>
     </div>
     <div class="catalog-info">
-      {% if thread.subject.len() > 0 %}
+      {% if item.thread.subject.len() > 0 %}
       <div class="thread-subject">
-        <a href="/{{ board.slug }}/{{ thread.id }}">{{ thread.subject }}</a>
+        <a href="/{{ board.slug }}/{{ item.thread.id }}">{{ item.thread.subject }}</a>
       </div>
       {% endif %}
-      <div class="thread-excerpt">{{ thread.content|truncate(120) }}</div>
+      <div class="thread-excerpt">{{ item.thread.content|truncate(120) }}</div>
       <div class="thread-meta">
-        <a href="/{{ board.slug }}/{{ thread.id }}">
-          {{ thread.post_count }}
-          {% if t.lang_code == "ru" %}{{ thread.post_count|ru_post_form }}{% else %}post{% if thread.post_count != 1 %}s{% endif %}{% endif %}
+        <a href="/{{ board.slug }}/{{ item.thread.id }}">
+          {{ item.thread.post_count }}
+          {% if t.lang_code == "ru" %}{{ item.thread.post_count|ru_post_form }}{% else %}post{% if item.thread.post_count != 1 %}s{% endif %}{% endif %}
         </a>
-        — {{ thread.bump_at }}
+        — {{ item.thread.bump_at }}
       </div>
+      {% if item.preview_posts.len() > 0 %}
+      <div class="thread-preview-posts">
+        {% for post in item.preview_posts %}
+        <div class="preview-post">
+          <span class="post-num">No.{{ post.id }}</span>
+          <span class="post-time">{{ post.created_at }}</span>
+          {% match post.image_path %}
+          {% when Some(img) %}
+          <a href="/{{ img }}" target="_blank" class="preview-post-img-link">[img]</a>
+          {% when None %}
+          {% endmatch %}
+          <span class="preview-post-content">{{ post.content|truncate(200) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
   {% endfor %}

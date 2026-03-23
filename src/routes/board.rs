@@ -10,7 +10,7 @@ use crate::{
     AppState,
     error::AppError,
     i18n::Translations,
-    models::{Board, Thread},
+    models::{Board, Post, Thread, ThreadWithPreviews},
     templates::BoardTemplate,
     utils::{hash_ip, process_image, real_ip},
 };
@@ -21,15 +21,20 @@ pub async fn board_get(
     headers: HeaderMap,
 ) -> Result<Html<String>, AppError> {
     let t = crate::i18n::lang_from_headers(&headers);
+    let (site_name, site_url) = {
+        let cfg = state.config.read().await;
+        (cfg.site.name.clone(), cfg.site.url.clone())
+    };
     let board = fetch_board(&state, &slug).await?;
-    let threads = fetch_threads(&state, board.id).await?;
+    let threads = fetch_threads_with_previews(&state, board.id).await?;
+    let boards = state.boards.read().await.clone();
 
     let html = BoardTemplate {
         board,
-        boards: state.boards.clone(),
+        boards,
         threads,
-        site_name: state.config.site.name.clone(),
-        site_url: state.config.site.url.clone(),
+        site_name,
+        site_url,
         css_hash: state.css_hash.clone(),
         error: None,
         t,
@@ -48,6 +53,21 @@ pub async fn board_post(
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
     let t = crate::i18n::lang_from_headers(&headers);
+    let (site_name, site_url, max_image_bytes, max_image_width, max_image_height,
+         upload_dir, max_subject_chars, max_content_chars, ip_salt) = {
+        let cfg = state.config.read().await;
+        (
+            cfg.site.name.clone(),
+            cfg.site.url.clone(),
+            cfg.limits.max_image_bytes,
+            cfg.limits.max_image_width,
+            cfg.limits.max_image_height,
+            cfg.database.upload_dir.clone(),
+            cfg.limits.max_subject_chars,
+            cfg.limits.max_content_chars,
+            cfg.site.ip_salt.clone(),
+        )
+    };
     let board = fetch_board(&state, &slug).await?;
     let client_ip = real_ip(&headers, &ConnectInfo(addr));
 
@@ -57,6 +77,8 @@ pub async fn board_post(
             board,
             "You are posting too fast. Please wait before trying again.",
             t,
+            &site_name,
+            &site_url,
         )
         .await;
     }
@@ -93,23 +115,18 @@ pub async fn board_post(
                     }
                 };
 
-                if bytes.len() > state.config.limits.max_image_bytes {
+                if bytes.len() > max_image_bytes {
                     image_result = Some(Err(format!(
                         "Image too large. Max {} MB",
-                        state.config.limits.max_image_bytes / 1024 / 1024
+                        max_image_bytes / 1024 / 1024
                     )));
                     continue;
                 }
 
-                match process_image(
-                    &bytes,
-                    &ext,
-                    state.config.limits.max_image_width,
-                    state.config.limits.max_image_height,
-                ) {
+                match process_image(&bytes, &ext, max_image_width, max_image_height) {
                     Ok(processed) => {
                         let save_name = format!("{}.{}", uuid::Uuid::new_v4(), ext);
-                        let save_path = state.config.database.upload_dir.join(&save_name);
+                        let save_path = upload_dir.join(&save_name);
                         tokio::fs::write(&save_path, &processed).await?;
                         image_result = Some(Ok(format!("uploads/{}", save_name)));
                     }
@@ -125,37 +142,41 @@ pub async fn board_post(
     let image_path = match image_result {
         Some(Ok(path)) => path,
         Some(Err(err_msg)) => {
-            return render_board_error(&state, board, &err_msg, t).await;
+            return render_board_error(&state, board, &err_msg, t, &site_name, &site_url).await;
         }
         None => {
-            return render_board_error(&state, board, "Thread requires an image", t).await;
+            return render_board_error(&state, board, "Thread requires an image", t, &site_name, &site_url).await;
         }
     };
 
-    if subject.chars().count() > state.config.limits.max_subject_chars {
+    if subject.chars().count() > max_subject_chars {
         return render_board_error(
             &state,
             board,
-            &format!("Subject too long (max {} characters)", state.config.limits.max_subject_chars),
+            &format!("Subject too long (max {} characters)", max_subject_chars),
             t,
+            &site_name,
+            &site_url,
         )
         .await;
     }
-    if content.chars().count() > state.config.limits.max_content_chars {
+    if content.chars().count() > max_content_chars {
         return render_board_error(
             &state,
             board,
-            &format!("Comment too long (max {} characters)", state.config.limits.max_content_chars),
+            &format!("Comment too long (max {} characters)", max_content_chars),
             t,
+            &site_name,
+            &site_url,
         )
         .await;
     }
 
     if content.trim().is_empty() && subject.trim().is_empty() {
-        return render_board_error(&state, board, "Thread must have a subject or comment", t).await;
+        return render_board_error(&state, board, "Thread must have a subject or comment", t, &site_name, &site_url).await;
     }
 
-    let ip_hash = hash_ip(&client_ip, &state.config.site.ip_salt);
+    let ip_hash = hash_ip(&client_ip, &ip_salt);
 
     let result = sqlx::query(
         "INSERT INTO threads (board_id, subject, content, image_path, ip_hash) VALUES (?, ?, ?, ?, ?)",
@@ -177,14 +198,17 @@ async fn render_board_error(
     board: Board,
     error_msg: &str,
     t: &'static Translations,
+    site_name: &str,
+    site_url: &str,
 ) -> Result<Response, AppError> {
-    let threads = fetch_threads(state, board.id).await?;
+    let threads = fetch_threads_with_previews(state, board.id).await?;
+    let boards = state.boards.read().await.clone();
     let html = BoardTemplate {
         board,
-        boards: state.boards.clone(),
+        boards,
         threads,
-        site_name: state.config.site.name.clone(),
-        site_url: state.config.site.url.clone(),
+        site_name: site_name.to_string(),
+        site_url: site_url.to_string(),
         css_hash: state.css_hash.clone(),
         error: Some(error_msg.to_string()),
         t,
@@ -202,14 +226,28 @@ async fn fetch_board(state: &AppState, slug: &str) -> Result<Board, AppError> {
         .ok_or_else(|| AppError::NotFound(format!("Board /{slug}/ not found")))
 }
 
-async fn fetch_threads(state: &AppState, board_id: i64) -> Result<Vec<Thread>, AppError> {
-    sqlx::query_as::<_, Thread>(
+async fn fetch_threads_with_previews(state: &AppState, board_id: i64) -> Result<Vec<ThreadWithPreviews>, AppError> {
+    let threads_per_board = state.config.read().await.limits.threads_per_board;
+    let threads = sqlx::query_as::<_, Thread>(
         "SELECT id, board_id, subject, content, image_path, ip_hash, created_at, bump_at, post_count
          FROM threads WHERE board_id = ? ORDER BY bump_at DESC LIMIT ?",
     )
     .bind(board_id)
-    .bind(state.config.limits.threads_per_board)
+    .bind(threads_per_board)
     .fetch_all(&state.pool)
-    .await
-    .map_err(Into::into)
+    .await?;
+
+    let mut result = Vec::with_capacity(threads.len());
+    for thread in threads {
+        let preview_posts = sqlx::query_as::<_, Post>(
+            "SELECT id, thread_id, content, image_path, ip_hash, created_at
+             FROM posts WHERE thread_id = ? ORDER BY id DESC LIMIT 5",
+        )
+        .bind(thread.id)
+        .fetch_all(&state.pool)
+        .await?;
+        let preview_posts: Vec<Post> = preview_posts.into_iter().rev().collect();
+        result.push(ThreadWithPreviews { thread, preview_posts });
+    }
+    Ok(result)
 }

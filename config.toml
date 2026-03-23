@@ -19,6 +19,12 @@ url = ""
 # IMPORTANT: Change this before deploying. Generate with: openssl rand -hex 32
 ip_salt = "change-me-to-a-random-secret"
 
+[admin]
+# Admin panel credentials.
+# IMPORTANT: Change the password before deploying. Generate with: openssl rand -hex 16
+username = "admin"
+password = "changeme"
+
 [limits]
 # Max upload size in bytes (default: 5 MB)
 max_image_bytes = 5242880

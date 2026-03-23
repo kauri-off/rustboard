@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct AppConfig {
     #[serde(default)]
     pub server: ServerConfig,
@@ -12,9 +12,11 @@ pub struct AppConfig {
     pub site: SiteConfig,
     #[serde(default)]
     pub limits: LimitsConfig,
+    #[serde(default)]
+    pub admin: AdminConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ServerConfig {
     #[serde(default = "default_bind_addr")]
     pub bind_addr: String,
@@ -22,7 +24,7 @@ pub struct ServerConfig {
     pub log_level: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DatabaseConfig {
     #[serde(default = "default_database_url")]
     pub url: String,
@@ -30,7 +32,7 @@ pub struct DatabaseConfig {
     pub upload_dir: PathBuf,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct SiteConfig {
     #[serde(default = "default_site_name")]
     pub name: String,
@@ -40,7 +42,7 @@ pub struct SiteConfig {
     pub ip_salt: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct LimitsConfig {
     #[serde(default = "default_max_image_bytes")]
     pub max_image_bytes: usize,
@@ -56,6 +58,14 @@ pub struct LimitsConfig {
     pub max_content_chars: usize,
     #[serde(default = "default_threads_per_board")]
     pub threads_per_board: u32,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct AdminConfig {
+    #[serde(default = "default_admin_username")]
+    pub username: String,
+    #[serde(default = "default_admin_password")]
+    pub password: String,
 }
 
 impl Default for ServerConfig {
@@ -100,6 +110,15 @@ impl Default for LimitsConfig {
     }
 }
 
+impl Default for AdminConfig {
+    fn default() -> Self {
+        Self {
+            username: default_admin_username(),
+            password: default_admin_password(),
+        }
+    }
+}
+
 fn default_bind_addr() -> String { "0.0.0.0:3000".to_string() }
 fn default_log_level() -> String { "info".to_string() }
 fn default_database_url() -> String { "sqlite:rustboard.db".to_string() }
@@ -113,6 +132,8 @@ fn default_post_cooldown_secs() -> u64 { 30 }
 fn default_max_subject_chars() -> usize { 200 }
 fn default_max_content_chars() -> usize { 2000 }
 fn default_threads_per_board() -> u32 { 100 }
+fn default_admin_username() -> String { "admin".to_string() }
+fn default_admin_password() -> String { "changeme".to_string() }
 
 fn config_path_from_args() -> Option<String> {
     let args: Vec<String> = std::env::args().collect();
@@ -151,6 +172,23 @@ impl AppConfig {
             eprintln!("  2. Set it in config.toml:");
             eprintln!("       [site]");
             eprintln!("       ip_salt = \"<your-generated-secret>\"");
+            eprintln!();
+            std::process::exit(1);
+        }
+
+        if config.admin.password == "changeme" {
+            eprintln!();
+            eprintln!("ERROR: admin.password has not been changed from the default value.");
+            eprintln!();
+            eprintln!("The admin panel provides full control over the board. Using the default");
+            eprintln!("password is a serious security risk.");
+            eprintln!();
+            eprintln!("To fix this:");
+            eprintln!("  1. Generate a strong password, e.g.:");
+            eprintln!("       openssl rand -hex 16");
+            eprintln!("  2. Set it in config.toml:");
+            eprintln!("       [admin]");
+            eprintln!("       password = \"<your-password>\"");
             eprintln!();
             std::process::exit(1);
         }

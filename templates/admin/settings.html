@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<h1>Settings</h1>
+<p class="admin-hint">Changes take effect immediately — no restart required.</p>
+
+{% match success %}
+{% when Some(s) %}
+<div class="admin-alert admin-alert-success">{{ s }}</div>
+{% when None %}
+{% endmatch %}
+
+{% match error %}
+{% when Some(e) %}
+<div class="admin-alert admin-alert-error">{{ e }}</div>
+{% when None %}
+{% endmatch %}
+
+<form method="post" action="/admin/settings" class="admin-form">
+  <h2>Site</h2>
+  <div class="admin-form-row">
+    <label for="site_name">Site Name</label>
+    <input type="text" id="site_name" name="site_name" value="{{ site_name }}" required>
+  </div>
+
+  <h2>Limits</h2>
+  <div class="admin-form-row">
+    <label for="threads_per_board">Threads per board</label>
+    <input type="number" id="threads_per_board" name="threads_per_board" value="{{ threads_per_board }}" min="1" max="10000" required>
+    <span class="admin-hint">Oldest threads by bump time are hidden beyond this limit</span>
+  </div>
+  <div class="admin-form-row">
+    <label for="post_cooldown_secs">Post cooldown (seconds)</label>
+    <input type="number" id="post_cooldown_secs" name="post_cooldown_secs" value="{{ post_cooldown_secs }}" min="0" max="3600" required>
+    <span class="admin-hint">Per-IP wait time between posts</span>
+  </div>
+  <div class="admin-form-row">
+    <label for="max_image_bytes">Max image size (bytes)</label>
+    <input type="number" id="max_image_bytes" name="max_image_bytes" value="{{ max_image_bytes }}" min="1024" required>
+    <span class="admin-hint">Default 5242880 = 5 MB</span>
+  </div>
+  <div class="admin-form-row">
+    <label for="max_subject_chars">Max subject length (chars)</label>
+    <input type="number" id="max_subject_chars" name="max_subject_chars" value="{{ max_subject_chars }}" min="1" max="10000" required>
+  </div>
+  <div class="admin-form-row">
+    <label for="max_content_chars">Max post body length (chars)</label>
+    <input type="number" id="max_content_chars" name="max_content_chars" value="{{ max_content_chars }}" min="1" max="100000" required>
+  </div>
+
+  <button type="submit" class="admin-btn-primary" style="margin-top:1em;">Save Settings</button>
+</form>
+{% endblock %}

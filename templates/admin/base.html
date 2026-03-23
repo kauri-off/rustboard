@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Admin{% endblock %} — Admin Panel</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ css_hash }}">
+</head>
+<body class="admin-body">
+  <div class="admin-layout">
+    <nav class="admin-sidebar">
+      <div class="admin-sidebar-title">Admin Panel</div>
+      <a href="/admin/dashboard">Dashboard</a>
+      <a href="/admin/boards">Boards</a>
+      <a href="/admin/posts">Posts</a>
+      <a href="/admin/settings">Settings</a>
+      <hr class="admin-sidebar-hr">
+      <a href="/boards">← Back to site</a>
+      <form method="post" action="/admin/logout" style="margin-top:auto;padding-top:1em;">
+        <button type="submit" class="admin-logout-btn">Log out</button>
+      </form>
+    </nav>
+    <main class="admin-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

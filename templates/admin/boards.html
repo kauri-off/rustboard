@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Boards{% endblock %}
+
+{% block content %}
+<h1>Boards</h1>
+
+{% match success %}
+{% when Some(s) %}
+<div class="admin-alert admin-alert-success">{{ s }}</div>
+{% when None %}
+{% endmatch %}
+
+{% match error %}
+{% when Some(e) %}
+<div class="admin-alert admin-alert-error">{{ e }}</div>
+{% when None %}
+{% endmatch %}
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Slug</th>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for board in boards %}
+    <tr>
+      <td><a href="/{{ board.slug }}/">/{{ board.slug }}/</a></td>
+      <td>{{ board.name }}</td>
+      <td>{{ board.description }}</td>
+      <td>
+        <form method="post" action="/admin/boards/{{ board.id }}/delete" style="display:inline;">
+          <button type="submit" class="admin-btn-danger"
+            onclick="return confirm('Delete /{{ board.slug }}/ and all its threads? This cannot be undone.')">
+            Delete
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2 style="margin-top:2em;">Create Board</h2>
+<form method="post" action="/admin/boards" class="admin-form">
+  <div class="admin-form-row">
+    <label for="slug">Slug</label>
+    <input type="text" id="slug" name="slug" placeholder="e.g. pol" pattern="[a-zA-Z0-9\-]+" required>
+    <span class="admin-hint">Letters, numbers, hyphens only</span>
+  </div>
+  <div class="admin-form-row">
+    <label for="name">Name</label>
+    <input type="text" id="name" name="name" placeholder="e.g. Politics" required>
+  </div>
+  <div class="admin-form-row">
+    <label for="description">Description</label>
+    <input type="text" id="description" name="description" placeholder="e.g. Political discussion">
+  </div>
+  <button type="submit" class="admin-btn-primary">Create Board</button>
+</form>
+{% endblock %}

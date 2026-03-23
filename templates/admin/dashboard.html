@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+<div class="admin-stats">
+  <div class="admin-stat-card">
+    <div class="admin-stat-value">{{ board_count }}</div>
+    <div class="admin-stat-label">Boards</div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-value">{{ thread_count }}</div>
+    <div class="admin-stat-label">Threads</div>
+  </div>
+  <div class="admin-stat-card">
+    <div class="admin-stat-value">{{ post_count }}</div>
+    <div class="admin-stat-label">Replies</div>
+  </div>
+</div>
+<div style="margin-top:2em;">
+  <a href="/admin/boards" class="admin-btn-primary" style="text-decoration:none;padding:0.5em 1.2em;">Manage Boards</a>
+  <a href="/admin/posts" class="admin-btn-primary" style="text-decoration:none;padding:0.5em 1.2em;margin-left:0.5em;">Manage Posts</a>
+  <a href="/admin/settings" class="admin-btn-primary" style="text-decoration:none;padding:0.5em 1.2em;margin-left:0.5em;">Settings</a>
+</div>
+{% endblock %}

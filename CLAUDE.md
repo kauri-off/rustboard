@@ -1,1 +1,1 @@
-No javascript in frontend
+No javascript in end user frontend

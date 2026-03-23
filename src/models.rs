@@ -32,3 +32,37 @@ pub struct Post {
     pub ip_hash: String,
     pub created_at: String,
 }
+
+#[derive(Debug, Clone)]
+pub struct ThreadWithPreviews {
+    pub thread: Thread,
+    pub preview_posts: Vec<Post>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+#[allow(dead_code)]
+pub struct ThreadWithBoard {
+    pub id: i64,
+    pub board_id: i64,
+    pub subject: String,
+    pub content: String,
+    pub image_path: String,
+    pub ip_hash: String,
+    pub created_at: String,
+    pub bump_at: String,
+    pub post_count: i64,
+    pub board_slug: String,
+    pub board_name: String,
+}
+
+#[derive(Debug, Clone, FromRow)]
+#[allow(dead_code)]
+pub struct PostWithBoard {
+    pub id: i64,
+    pub thread_id: i64,
+    pub content: String,
+    pub image_path: Option<String>,
+    pub ip_hash: String,
+    pub created_at: String,
+    pub board_slug: String,
+}

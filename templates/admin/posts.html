@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Posts{% endblock %}
+
+{% block content %}
+<h1>Posts</h1>
+<p class="admin-hint">Showing the 50 most recent threads and replies.</p>
+
+<h2>Threads</h2>
+{% if threads.is_empty() %}
+<p>No threads yet.</p>
+{% else %}
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Board</th>
+      <th>Subject</th>
+      <th>Content</th>
+      <th>IP Hash</th>
+      <th>Created</th>
+      <th>Replies</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in threads %}
+    <tr>
+      <td>{{ t.id }}</td>
+      <td><a href="/{{ t.board_slug }}/">/{{ t.board_slug }}/</a></td>
+      <td>{{ t.subject|truncate(40) }}</td>
+      <td>{{ t.content|truncate(60) }}</td>
+      <td><code>{{ t.ip_hash }}</code></td>
+      <td>{{ t.created_at }}</td>
+      <td>{{ t.post_count }}</td>
+      <td>
+        <a href="/{{ t.board_slug }}/{{ t.id }}" target="_blank" class="admin-btn-small">View</a>
+        <form method="post" action="/admin/threads/{{ t.id }}/delete" style="display:inline;">
+          <button type="submit" class="admin-btn-danger admin-btn-small"
+            onclick="return confirm('Delete thread #{{ t.id }} and all its replies?')">
+            Delete
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2 style="margin-top:2em;">Replies</h2>
+{% if posts.is_empty() %}
+<p>No replies yet.</p>
+{% else %}
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Thread</th>
+      <th>Board</th>
+      <th>Content</th>
+      <th>IP Hash</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in posts %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td><a href="/{{ p.board_slug }}/{{ p.thread_id }}" target="_blank">#{{ p.thread_id }}</a></td>
+      <td>/{{ p.board_slug }}/</td>
+      <td>{{ p.content|truncate(80) }}</td>
+      <td><code>{{ p.ip_hash }}</code></td>
+      <td>{{ p.created_at }}</td>
+      <td>
+        <form method="post" action="/admin/posts/{{ p.id }}/delete" style="display:inline;">
+          <button type="submit" class="admin-btn-danger admin-btn-small"
+            onclick="return confirm('Delete reply #{{ p.id }}?')">
+            Delete
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

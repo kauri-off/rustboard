@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Login</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ css_hash }}">
+</head>
+<body class="admin-body">
+  <div class="admin-login-wrap">
+    <h1>Admin Login</h1>
+    {% match error %}
+    {% when Some(e) %}
+    <div class="admin-alert admin-alert-error">{{ e }}</div>
+    {% when None %}
+    {% endmatch %}
+    <form method="post" action="/admin/login" class="admin-login-form">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+      <button type="submit" class="admin-btn-primary">Log in</button>
+    </form>
+  </div>
+</body>
+</html>

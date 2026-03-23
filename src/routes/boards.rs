@@ -9,10 +9,15 @@ pub async fn board_list(
     headers: HeaderMap,
 ) -> Result<Html<String>, AppError> {
     let t = crate::i18n::lang_from_headers(&headers);
+    let (site_name, site_url) = {
+        let cfg = state.config.read().await;
+        (cfg.site.name.clone(), cfg.site.url.clone())
+    };
+    let boards = state.boards.read().await.clone();
     let html = BoardListTemplate {
-        boards: state.boards.clone(),
-        site_name: state.config.site.name.clone(),
-        site_url: state.config.site.url.clone(),
+        boards,
+        site_name,
+        site_url,
         css_hash: state.css_hash.clone(),
         t,
     }
