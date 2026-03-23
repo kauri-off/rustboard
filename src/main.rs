@@ -9,18 +9,16 @@ mod routes;
 mod templates;
 mod utils;
 
-use std::{
-    collections::HashMap,
-    net::SocketAddr,
-    sync::Arc,
-    time::Instant,
-};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Instant};
 
+use axum::http::{HeaderName, HeaderValue};
 use axum::{Router, extract::ConnectInfo, routing::get};
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, RwLock};
-use axum::http::{HeaderName, HeaderValue};
-use tower_http::{services::ServeDir, trace::{self, TraceLayer}};
+use tower_http::{
+    services::ServeDir,
+    trace::{self, TraceLayer},
+};
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
 
@@ -95,7 +93,9 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Loaded {} boards", boards.len());
 
-    let css_bytes = tokio::fs::read("static/style.css").await.unwrap_or_default();
+    let css_bytes = tokio::fs::read("static/style.css")
+        .await
+        .unwrap_or_default();
     let css_hash = hex::encode(&Sha256::digest(&css_bytes)[..8]);
     error::set_css_hash(css_hash.clone());
 
@@ -136,15 +136,33 @@ async fn main() -> anyhow::Result<()> {
         )
         // Admin routes
         .route("/admin", get(routes::admin::index))
-        .route("/admin/login", get(routes::admin::login_get).post(routes::admin::login_post))
+        .route(
+            "/admin/login",
+            get(routes::admin::login_get).post(routes::admin::login_post),
+        )
         .route("/admin/logout", axum::routing::post(routes::admin::logout))
         .route("/admin/dashboard", get(routes::admin::dashboard))
-        .route("/admin/boards", get(routes::admin::boards_get).post(routes::admin::boards_post))
-        .route("/admin/boards/{id}/delete", axum::routing::post(routes::admin::board_delete))
+        .route(
+            "/admin/boards",
+            get(routes::admin::boards_get).post(routes::admin::boards_post),
+        )
+        .route(
+            "/admin/boards/{id}/delete",
+            axum::routing::post(routes::admin::board_delete),
+        )
         .route("/admin/posts", get(routes::admin::posts_get))
-        .route("/admin/threads/{id}/delete", axum::routing::post(routes::admin::thread_delete))
-        .route("/admin/posts/{id}/delete", axum::routing::post(routes::admin::post_delete))
-        .route("/admin/settings", get(routes::admin::settings_get).post(routes::admin::settings_post))
+        .route(
+            "/admin/threads/{id}/delete",
+            axum::routing::post(routes::admin::thread_delete),
+        )
+        .route(
+            "/admin/posts/{id}/delete",
+            axum::routing::post(routes::admin::post_delete),
+        )
+        .route(
+            "/admin/settings",
+            get(routes::admin::settings_get).post(routes::admin::settings_post),
+        )
         .nest_service("/uploads", ServeDir::new(&upload_dir))
         .nest_service(
             "/static",
@@ -169,38 +187,65 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn apply_db_settings(config: &mut AppConfig, pool: &sqlx::SqlitePool) -> anyhow::Result<()> {
+pub async fn apply_db_settings(
+    config: &mut AppConfig,
+    pool: &sqlx::SqlitePool,
+) -> anyhow::Result<()> {
     let rows: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
         .fetch_all(pool)
         .await?;
     let map: HashMap<String, String> = rows.into_iter().collect();
 
     // Apply DB values to config
-    if let Some(v) = map.get("site_name") { config.site.name = v.clone(); }
+    if let Some(v) = map.get("site_name") {
+        config.site.name = v.clone();
+    }
     if let Some(v) = map.get("threads_per_board") {
-        if let Ok(n) = v.parse() { config.limits.threads_per_board = n; }
+        if let Ok(n) = v.parse() {
+            config.limits.threads_per_board = n;
+        }
     }
     if let Some(v) = map.get("post_cooldown_secs") {
-        if let Ok(n) = v.parse() { config.limits.post_cooldown_secs = n; }
+        if let Ok(n) = v.parse() {
+            config.limits.post_cooldown_secs = n;
+        }
     }
     if let Some(v) = map.get("max_image_bytes") {
-        if let Ok(n) = v.parse() { config.limits.max_image_bytes = n; }
+        if let Ok(n) = v.parse() {
+            config.limits.max_image_bytes = n;
+        }
     }
     if let Some(v) = map.get("max_subject_chars") {
-        if let Ok(n) = v.parse() { config.limits.max_subject_chars = n; }
+        if let Ok(n) = v.parse() {
+            config.limits.max_subject_chars = n;
+        }
     }
     if let Some(v) = map.get("max_content_chars") {
-        if let Ok(n) = v.parse() { config.limits.max_content_chars = n; }
+        if let Ok(n) = v.parse() {
+            config.limits.max_content_chars = n;
+        }
     }
 
     // Write config values to DB for any missing settings
     let defaults = [
         ("site_name", config.site.name.clone()),
-        ("threads_per_board", config.limits.threads_per_board.to_string()),
-        ("post_cooldown_secs", config.limits.post_cooldown_secs.to_string()),
+        (
+            "threads_per_board",
+            config.limits.threads_per_board.to_string(),
+        ),
+        (
+            "post_cooldown_secs",
+            config.limits.post_cooldown_secs.to_string(),
+        ),
         ("max_image_bytes", config.limits.max_image_bytes.to_string()),
-        ("max_subject_chars", config.limits.max_subject_chars.to_string()),
-        ("max_content_chars", config.limits.max_content_chars.to_string()),
+        (
+            "max_subject_chars",
+            config.limits.max_subject_chars.to_string(),
+        ),
+        (
+            "max_content_chars",
+            config.limits.max_content_chars.to_string(),
+        ),
     ];
     for (key, value) in defaults {
         if !map.contains_key(key) {

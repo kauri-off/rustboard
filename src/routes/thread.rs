@@ -53,8 +53,16 @@ pub async fn thread_post(
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
     let t = crate::i18n::lang_from_headers(&headers);
-    let (site_name, site_url, max_image_bytes, max_image_width, max_image_height,
-         upload_dir, max_content_chars, ip_salt) = {
+    let (
+        site_name,
+        site_url,
+        max_image_bytes,
+        max_image_width,
+        max_image_height,
+        upload_dir,
+        max_content_chars,
+        ip_salt,
+    ) = {
         let cfg = state.config.read().await;
         (
             cfg.site.name.clone(),
@@ -108,8 +116,9 @@ pub async fn thread_post(
                 let ext = match ext {
                     Some(e) => e,
                     None => {
-                        form_error =
-                            Some("Invalid file type. Allowed: jpg, jpeg, png, gif, webp".to_string());
+                        form_error = Some(
+                            "Invalid file type. Allowed: jpg, jpeg, png, gif, webp".to_string(),
+                        );
                         continue;
                     }
                 };
@@ -139,7 +148,8 @@ pub async fn thread_post(
     }
 
     if let Some(err) = form_error {
-        return render_thread_error(&state, board, thread, posts, &err, t, &site_name, &site_url).await;
+        return render_thread_error(&state, board, thread, posts, &err, t, &site_name, &site_url)
+            .await;
     }
 
     if content.chars().count() > max_content_chars {
@@ -157,7 +167,17 @@ pub async fn thread_post(
     }
 
     if content.trim().is_empty() {
-        return render_thread_error(&state, board, thread, posts, "Reply must have content", t, &site_name, &site_url).await;
+        return render_thread_error(
+            &state,
+            board,
+            thread,
+            posts,
+            "Reply must have content",
+            t,
+            &site_name,
+            &site_url,
+        )
+        .await;
     }
 
     let ip_hash = hash_ip(&client_ip, &ip_salt);

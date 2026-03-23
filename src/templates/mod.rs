@@ -90,7 +90,8 @@ pub struct AdminSettingsTemplate {
 }
 
 pub mod filters {
-    pub fn ru_post_form(n: &i64) -> askama::Result<&'static str> {
+    #[askama::filter_fn]
+    pub fn ru_post_form(n: &i64, _: &dyn askama::Values) -> askama::Result<&'static str> {
         Ok(crate::i18n::ru_posts(*n))
     }
 }

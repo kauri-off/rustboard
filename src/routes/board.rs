@@ -53,8 +53,17 @@ pub async fn board_post(
     mut multipart: Multipart,
 ) -> Result<Response, AppError> {
     let t = crate::i18n::lang_from_headers(&headers);
-    let (site_name, site_url, max_image_bytes, max_image_width, max_image_height,
-         upload_dir, max_subject_chars, max_content_chars, ip_salt) = {
+    let (
+        site_name,
+        site_url,
+        max_image_bytes,
+        max_image_width,
+        max_image_height,
+        upload_dir,
+        max_subject_chars,
+        max_content_chars,
+        ip_salt,
+    ) = {
         let cfg = state.config.read().await;
         (
             cfg.site.name.clone(),
@@ -145,7 +154,15 @@ pub async fn board_post(
             return render_board_error(&state, board, &err_msg, t, &site_name, &site_url).await;
         }
         None => {
-            return render_board_error(&state, board, "Thread requires an image", t, &site_name, &site_url).await;
+            return render_board_error(
+                &state,
+                board,
+                "Thread requires an image",
+                t,
+                &site_name,
+                &site_url,
+            )
+            .await;
         }
     };
 
@@ -173,7 +190,15 @@ pub async fn board_post(
     }
 
     if content.trim().is_empty() && subject.trim().is_empty() {
-        return render_board_error(&state, board, "Thread must have a subject or comment", t, &site_name, &site_url).await;
+        return render_board_error(
+            &state,
+            board,
+            "Thread must have a subject or comment",
+            t,
+            &site_name,
+            &site_url,
+        )
+        .await;
     }
 
     let ip_hash = hash_ip(&client_ip, &ip_salt);
@@ -226,7 +251,10 @@ async fn fetch_board(state: &AppState, slug: &str) -> Result<Board, AppError> {
         .ok_or_else(|| AppError::NotFound(format!("Board /{slug}/ not found")))
 }
 
-async fn fetch_threads_with_previews(state: &AppState, board_id: i64) -> Result<Vec<ThreadWithPreviews>, AppError> {
+async fn fetch_threads_with_previews(
+    state: &AppState,
+    board_id: i64,
+) -> Result<Vec<ThreadWithPreviews>, AppError> {
     let threads_per_board = state.config.read().await.limits.threads_per_board;
     let threads = sqlx::query_as::<_, Thread>(
         "SELECT id, board_id, subject, content, image_path, ip_hash, created_at, bump_at, post_count
@@ -247,7 +275,10 @@ async fn fetch_threads_with_previews(state: &AppState, board_id: i64) -> Result<
         .fetch_all(&state.pool)
         .await?;
         let preview_posts: Vec<Post> = preview_posts.into_iter().rev().collect();
-        result.push(ThreadWithPreviews { thread, preview_posts });
+        result.push(ThreadWithPreviews {
+            thread,
+            preview_posts,
+        });
     }
     Ok(result)
 }

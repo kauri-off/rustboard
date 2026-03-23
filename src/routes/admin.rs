@@ -5,8 +5,8 @@ use axum::{
     http::HeaderMap,
     response::{Html, IntoResponse, Redirect, Response},
 };
-use std::net::SocketAddr;
 use serde::Deserialize;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::{
@@ -14,11 +14,11 @@ use crate::{
     admin_auth::{create_session, destroy_session, extract_session_token, is_valid_session},
     error::AppError,
     models::{Board, PostWithBoard, ThreadWithBoard},
-    utils::real_ip,
     templates::{
-        AdminBoardsTemplate, AdminDashboardTemplate, AdminLoginTemplate,
-        AdminPostsTemplate, AdminSettingsTemplate,
+        AdminBoardsTemplate, AdminDashboardTemplate, AdminLoginTemplate, AdminPostsTemplate,
+        AdminSettingsTemplate,
     },
+    utils::real_ip,
 };
 
 // ── Auth check ──────────────────────────────────────────────────────────────
@@ -67,10 +67,7 @@ pub async fn index() -> Response {
     Redirect::to("/admin/dashboard").into_response()
 }
 
-pub async fn login_get(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Response {
+pub async fn login_get(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     // If already logged in, redirect to dashboard
     if check_auth(&state, &headers).await.is_none() {
         return Redirect::to("/admin/dashboard").into_response();
@@ -89,7 +86,10 @@ pub async fn login_post(
     // Check lockout before doing anything else
     if state.login_rate_limiter.is_locked(&client_ip) {
         let secs = state.login_rate_limiter.lockout_secs_remaining(&client_ip);
-        let msg = format!("Too many failed attempts. Try again in {} minutes.", (secs + 59) / 60);
+        let msg = format!(
+            "Too many failed attempts. Try again in {} minutes.",
+            (secs + 59) / 60
+        );
         return render_login(Some(&msg), &state.css_hash);
     }
 
@@ -114,7 +114,10 @@ pub async fn login_post(
         state.login_rate_limiter.record_failure(&client_ip);
         let secs = state.login_rate_limiter.lockout_secs_remaining(&client_ip);
         let msg = if secs > 0 {
-            format!("Too many failed attempts. Try again in {} minutes.", (secs + 59) / 60)
+            format!(
+                "Too many failed attempts. Try again in {} minutes.",
+                (secs + 59) / 60
+            )
         } else {
             "Invalid username or password.".to_string()
         };
@@ -122,10 +125,7 @@ pub async fn login_post(
     }
 }
 
-pub async fn logout(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Response {
+pub async fn logout(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     if let Some(token) = extract_session_token(&headers) {
         destroy_session(&state, &token).await;
     }
@@ -141,7 +141,9 @@ pub async fn dashboard(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     let board_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM boards")
         .fetch_one(&state.pool)
@@ -169,7 +171,9 @@ pub async fn boards_get(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     let boards = state.boards.read().await.clone();
     let html = AdminBoardsTemplate {
@@ -189,23 +193,26 @@ pub async fn boards_post(
     headers: HeaderMap,
     Form(form): Form<CreateBoardForm>,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     let slug = form.slug.trim().to_lowercase();
     let name = form.name.trim().to_string();
     let description = form.description.trim().to_string();
 
-    let render_error = |msg: &str, state: &AppState, boards: Vec<Board>| -> Result<Response, AppError> {
-        let html = AdminBoardsTemplate {
-            boards,
-            error: Some(msg.to_string()),
-            success: None,
-            css_hash: state.css_hash.clone(),
-        }
-        .render()
-        .map_err(|e| AppError::Internal(e.into()))?;
-        Ok(Html(html).into_response())
-    };
+    let render_error =
+        |msg: &str, state: &AppState, boards: Vec<Board>| -> Result<Response, AppError> {
+            let html = AdminBoardsTemplate {
+                boards,
+                error: Some(msg.to_string()),
+                success: None,
+                css_hash: state.css_hash.clone(),
+            }
+            .render()
+            .map_err(|e| AppError::Internal(e.into()))?;
+            Ok(Html(html).into_response())
+        };
 
     let boards = state.boards.read().await.clone();
 
@@ -213,7 +220,11 @@ pub async fn boards_post(
         return render_error("Slug and name are required.", &state, boards);
     }
     if !slug.chars().all(|c| c.is_alphanumeric() || c == '-') {
-        return render_error("Slug may only contain letters, numbers, and hyphens.", &state, boards);
+        return render_error(
+            "Slug may only contain letters, numbers, and hyphens.",
+            &state,
+            boards,
+        );
     }
     if boards.iter().any(|b| b.slug == slug) {
         return render_error("A board with that slug already exists.", &state, boards);
@@ -250,7 +261,9 @@ pub async fn board_delete(
     headers: HeaderMap,
     Path(board_id): Path<i64>,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     // Collect image paths before deletion (FK cascade will remove threads/posts)
     let thread_images: Vec<String> =
@@ -293,7 +306,9 @@ pub async fn posts_get(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     let threads: Vec<ThreadWithBoard> = sqlx::query_as(
         "SELECT t.id, t.board_id, t.subject, t.content, t.image_path, t.ip_hash,
@@ -331,7 +346,9 @@ pub async fn thread_delete(
     headers: HeaderMap,
     Path(thread_id): Path<i64>,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     // Collect images before deletion
     let thread_image: Option<String> =
@@ -366,7 +383,9 @@ pub async fn post_delete(
     headers: HeaderMap,
     Path(post_id): Path<i64>,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     let image_path: Option<Option<String>> =
         sqlx::query_scalar("SELECT image_path FROM posts WHERE id = ?")
@@ -390,10 +409,18 @@ pub async fn settings_get(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
-    let (site_name, threads_per_board, post_cooldown_secs, max_image_bytes,
-         max_subject_chars, max_content_chars) = {
+    let (
+        site_name,
+        threads_per_board,
+        post_cooldown_secs,
+        max_image_bytes,
+        max_subject_chars,
+        max_content_chars,
+    ) = {
         let cfg = state.config.read().await;
         (
             cfg.site.name.clone(),
@@ -427,7 +454,9 @@ pub async fn settings_post(
     headers: HeaderMap,
     Form(form): Form<SettingsForm>,
 ) -> Result<Response, AppError> {
-    if let Some(r) = check_auth(&state, &headers).await { return Ok(r); }
+    if let Some(r) = check_auth(&state, &headers).await {
+        return Ok(r);
+    }
 
     let site_name = form.site_name.trim().to_string();
     if site_name.is_empty() {

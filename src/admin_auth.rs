@@ -13,7 +13,11 @@ const SESSION_TTL: Duration = Duration::from_secs(24 * 3600);
 pub async fn create_session(state: &Arc<AppState>) -> String {
     let token = Uuid::new_v4().to_string();
     let expiry = Instant::now() + SESSION_TTL;
-    state.admin_sessions.lock().await.insert(token.clone(), expiry);
+    state
+        .admin_sessions
+        .lock()
+        .await
+        .insert(token.clone(), expiry);
     token
 }
 

@@ -19,7 +19,9 @@ pub struct LoginRateLimiter {
 
 impl LoginRateLimiter {
     pub fn new() -> Self {
-        Self { map: Mutex::new(HashMap::new()) }
+        Self {
+            map: Mutex::new(HashMap::new()),
+        }
     }
 
     /// Returns true if the IP is currently locked out.

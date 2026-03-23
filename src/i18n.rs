@@ -68,9 +68,7 @@ pub fn lang_from_headers(headers: &axum::http::HeaderMap) -> &'static Translatio
         .get("cookie")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.split(';').find_map(|p| p.trim().strip_prefix("lang=")));
-    let accept_lang = headers
-        .get("accept-language")
-        .and_then(|v| v.to_str().ok());
+    let accept_lang = headers.get("accept-language").and_then(|v| v.to_str().ok());
     match cookie_lang {
         Some("ru") => &RU,
         Some(_) => &EN,

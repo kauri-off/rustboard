@@ -119,21 +119,51 @@ impl Default for AdminConfig {
     }
 }
 
-fn default_bind_addr() -> String { "0.0.0.0:3000".to_string() }
-fn default_log_level() -> String { "info".to_string() }
-fn default_database_url() -> String { "sqlite:rustboard.db".to_string() }
-fn default_upload_dir() -> PathBuf { PathBuf::from("./uploads") }
-fn default_site_name() -> String { "Rustboard".to_string() }
-fn default_ip_salt() -> String { "change-me-to-a-random-secret".to_string() }
-fn default_max_image_bytes() -> usize { 5 * 1024 * 1024 }
-fn default_max_image_width() -> u32 { 10_000 }
-fn default_max_image_height() -> u32 { 10_000 }
-fn default_post_cooldown_secs() -> u64 { 30 }
-fn default_max_subject_chars() -> usize { 200 }
-fn default_max_content_chars() -> usize { 2000 }
-fn default_threads_per_board() -> u32 { 100 }
-fn default_admin_username() -> String { "admin".to_string() }
-fn default_admin_password() -> String { "changeme".to_string() }
+fn default_bind_addr() -> String {
+    "0.0.0.0:3000".to_string()
+}
+fn default_log_level() -> String {
+    "info".to_string()
+}
+fn default_database_url() -> String {
+    "sqlite:rustboard.db".to_string()
+}
+fn default_upload_dir() -> PathBuf {
+    PathBuf::from("./uploads")
+}
+fn default_site_name() -> String {
+    "Rustboard".to_string()
+}
+fn default_ip_salt() -> String {
+    "change-me-to-a-random-secret".to_string()
+}
+fn default_max_image_bytes() -> usize {
+    5 * 1024 * 1024
+}
+fn default_max_image_width() -> u32 {
+    10_000
+}
+fn default_max_image_height() -> u32 {
+    10_000
+}
+fn default_post_cooldown_secs() -> u64 {
+    30
+}
+fn default_max_subject_chars() -> usize {
+    200
+}
+fn default_max_content_chars() -> usize {
+    2000
+}
+fn default_threads_per_board() -> u32 {
+    100
+}
+fn default_admin_username() -> String {
+    "admin".to_string()
+}
+fn default_admin_password() -> String {
+    "changeme".to_string()
+}
 
 fn config_path_from_args() -> Option<String> {
     let args: Vec<String> = std::env::args().collect();
@@ -150,14 +180,15 @@ const DEFAULT_SALTS: &[&str] = &[
 impl AppConfig {
     pub fn load() -> anyhow::Result<Self> {
         let path = config_path_from_args().unwrap_or_else(|| "config.toml".to_string());
-        let text = std::fs::read_to_string(&path)
-            .map_err(|_| anyhow::anyhow!(
+        let text = std::fs::read_to_string(&path).map_err(|_| {
+            anyhow::anyhow!(
                 "Could not read {path}. Create one in the working directory.\n\
                  See the README for a full example."
-            ))?;
+            )
+        })?;
 
-        let config: AppConfig = toml::from_str(&text)
-            .map_err(|e| anyhow::anyhow!("Invalid config.toml: {e}"))?;
+        let config: AppConfig =
+            toml::from_str(&text).map_err(|e| anyhow::anyhow!("Invalid config.toml: {e}"))?;
 
         if DEFAULT_SALTS.contains(&config.site.ip_salt.as_str()) {
             eprintln!();
