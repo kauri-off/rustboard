@@ -28,8 +28,8 @@ pub async fn thread_get(
         boards: state.boards.clone(),
         thread,
         posts,
-        site_name: state.config.site_name.clone(),
-        site_url: state.config.site_url.clone(),
+        site_name: state.config.site.name.clone(),
+        site_url: state.config.site.url.clone(),
         css_hash: state.css_hash.clone(),
         error: None,
         t,
@@ -93,10 +93,10 @@ pub async fn thread_post(
                     }
                 };
 
-                if bytes.len() > state.config.max_image_bytes {
+                if bytes.len() > state.config.limits.max_image_bytes {
                     form_error = Some(format!(
                         "Image too large. Max {} MB",
-                        state.config.max_image_bytes / 1024 / 1024
+                        state.config.limits.max_image_bytes / 1024 / 1024
                     ));
                     continue;
                 }
@@ -104,12 +104,12 @@ pub async fn thread_post(
                 match process_image(
                     &bytes,
                     &ext,
-                    state.config.max_image_width,
-                    state.config.max_image_height,
+                    state.config.limits.max_image_width,
+                    state.config.limits.max_image_height,
                 ) {
                     Ok(processed) => {
                         let save_name = format!("{}.{}", uuid::Uuid::new_v4(), ext);
-                        let save_path = state.config.upload_dir.join(&save_name);
+                        let save_path = state.config.database.upload_dir.join(&save_name);
                         tokio::fs::write(&save_path, &processed).await?;
                         image_path = Some(format!("uploads/{}", save_name));
                     }
@@ -126,13 +126,13 @@ pub async fn thread_post(
         return render_thread_error(&state, board, thread, posts, &err, t).await;
     }
 
-    if content.chars().count() > state.config.max_content_chars {
+    if content.chars().count() > state.config.limits.max_content_chars {
         return render_thread_error(
             &state,
             board,
             thread,
             posts,
-            &format!("Comment too long (max {} characters)", state.config.max_content_chars),
+            &format!("Comment too long (max {} characters)", state.config.limits.max_content_chars),
             t,
         )
         .await;
@@ -142,7 +142,7 @@ pub async fn thread_post(
         return render_thread_error(&state, board, thread, posts, "Reply must have content", t).await;
     }
 
-    let ip_hash = hash_ip(&client_ip, &state.config.ip_salt);
+    let ip_hash = hash_ip(&client_ip, &state.config.site.ip_salt);
 
     let result = sqlx::query(
         "INSERT INTO posts (thread_id, content, image_path, ip_hash) VALUES (?, ?, ?, ?)",
@@ -179,8 +179,8 @@ async fn render_thread_error(
         boards: state.boards.clone(),
         thread,
         posts,
-        site_name: state.config.site_name.clone(),
-        site_url: state.config.site_url.clone(),
+        site_name: state.config.site.name.clone(),
+        site_url: state.config.site.url.clone(),
         css_hash: state.css_hash.clone(),
         error: Some(error_msg.to_string()),
         t,

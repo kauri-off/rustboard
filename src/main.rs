@@ -14,6 +14,7 @@ use axum::{Router, extract::ConnectInfo, routing::get};
 use sha2::{Digest, Sha256};
 use tower_http::{services::ServeDir, trace::{self, TraceLayer}};
 use tracing::Level;
+use tracing_subscriber::EnvFilter;
 
 use config::AppConfig;
 use models::Board;
@@ -29,9 +30,10 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenvy::dotenv().ok();
+    let config = AppConfig::load()?;
 
     tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::new(&config.server.log_level))
         .with_target(false)
         .compact()
         .init();
@@ -68,11 +70,9 @@ async fn main() -> anyhow::Result<()> {
         })
         .on_response(trace::DefaultOnResponse::new().level(Level::INFO));
 
-    let config = AppConfig::from_env()?;
+    tokio::fs::create_dir_all(&config.database.upload_dir).await?;
 
-    tokio::fs::create_dir_all(&config.upload_dir).await?;
-
-    let pool = db::create_pool(&config.database_url).await?;
+    let pool = db::create_pool(&config.database.url).await?;
     db::run_migrations(&pool).await?;
 
     let boards =
@@ -86,7 +86,7 @@ async fn main() -> anyhow::Result<()> {
     let css_hash = hex::encode(&Sha256::digest(&css_bytes)[..8]);
     error::set_css_hash(css_hash.clone());
 
-    let cooldown = config.post_cooldown_secs;
+    let cooldown = config.limits.post_cooldown_secs;
     let state = Arc::new(AppState {
         pool,
         config,
@@ -95,8 +95,8 @@ async fn main() -> anyhow::Result<()> {
         css_hash,
     });
 
-    let upload_dir = state.config.upload_dir.clone();
-    let bind_addr = state.config.bind_addr.clone();
+    let upload_dir = state.config.database.upload_dir.clone();
+    let bind_addr = state.config.server.bind_addr.clone();
 
     let app = Router::new()
         .route("/set-lang", axum::routing::post(routes::lang::set_lang))

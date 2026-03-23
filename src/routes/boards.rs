@@ -11,8 +11,8 @@ pub async fn board_list(
     let t = crate::i18n::lang_from_headers(&headers);
     let html = BoardListTemplate {
         boards: state.boards.clone(),
-        site_name: state.config.site_name.clone(),
-        site_url: state.config.site_url.clone(),
+        site_name: state.config.site.name.clone(),
+        site_url: state.config.site.url.clone(),
         css_hash: state.css_hash.clone(),
         t,
     }

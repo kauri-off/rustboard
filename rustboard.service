@@ -9,7 +9,6 @@ WorkingDirectory=/opt/rustboard
 ExecStart=/opt/rustboard/rustboard
 Restart=on-failure
 RestartSec=5
-EnvironmentFile=/opt/rustboard/.env
 
 [Install]
 WantedBy=multi-user.target

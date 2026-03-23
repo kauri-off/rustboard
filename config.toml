@@ -1,0 +1,35 @@
+[server]
+# Address and port to listen on
+bind_addr = "0.0.0.0:3000"
+# Tracing log level: error, warn, info, debug, or trace
+log_level = "info"
+
+[database]
+# SQLite database file path
+url = "sqlite:rustboard.db"
+# Directory for uploaded images
+upload_dir = "./uploads"
+
+[site]
+# Displayed site name
+name = "Rustboard"
+# Public base URL for OG/meta tags (leave empty to disable)
+url = ""
+# Salt for hashing poster IP addresses.
+# IMPORTANT: Change this before deploying. Generate with: openssl rand -hex 32
+ip_salt = "change-me-to-a-random-secret"
+
+[limits]
+# Max upload size in bytes (default: 5 MB)
+max_image_bytes = 5242880
+# Max image dimensions in pixels
+max_image_width = 10000
+max_image_height = 10000
+# Seconds a poster must wait between posts (per IP)
+post_cooldown_secs = 30
+# Max subject line length in characters
+max_subject_chars = 200
+# Max post body length in characters
+max_content_chars = 2000
+# Max threads shown per board (oldest by bump time are hidden)
+threads_per_board = 100

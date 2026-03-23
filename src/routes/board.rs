@@ -28,8 +28,8 @@ pub async fn board_get(
         board,
         boards: state.boards.clone(),
         threads,
-        site_name: state.config.site_name.clone(),
-        site_url: state.config.site_url.clone(),
+        site_name: state.config.site.name.clone(),
+        site_url: state.config.site.url.clone(),
         css_hash: state.css_hash.clone(),
         error: None,
         t,
@@ -93,10 +93,10 @@ pub async fn board_post(
                     }
                 };
 
-                if bytes.len() > state.config.max_image_bytes {
+                if bytes.len() > state.config.limits.max_image_bytes {
                     image_result = Some(Err(format!(
                         "Image too large. Max {} MB",
-                        state.config.max_image_bytes / 1024 / 1024
+                        state.config.limits.max_image_bytes / 1024 / 1024
                     )));
                     continue;
                 }
@@ -104,12 +104,12 @@ pub async fn board_post(
                 match process_image(
                     &bytes,
                     &ext,
-                    state.config.max_image_width,
-                    state.config.max_image_height,
+                    state.config.limits.max_image_width,
+                    state.config.limits.max_image_height,
                 ) {
                     Ok(processed) => {
                         let save_name = format!("{}.{}", uuid::Uuid::new_v4(), ext);
-                        let save_path = state.config.upload_dir.join(&save_name);
+                        let save_path = state.config.database.upload_dir.join(&save_name);
                         tokio::fs::write(&save_path, &processed).await?;
                         image_result = Some(Ok(format!("uploads/{}", save_name)));
                     }
@@ -132,20 +132,20 @@ pub async fn board_post(
         }
     };
 
-    if subject.chars().count() > state.config.max_subject_chars {
+    if subject.chars().count() > state.config.limits.max_subject_chars {
         return render_board_error(
             &state,
             board,
-            &format!("Subject too long (max {} characters)", state.config.max_subject_chars),
+            &format!("Subject too long (max {} characters)", state.config.limits.max_subject_chars),
             t,
         )
         .await;
     }
-    if content.chars().count() > state.config.max_content_chars {
+    if content.chars().count() > state.config.limits.max_content_chars {
         return render_board_error(
             &state,
             board,
-            &format!("Comment too long (max {} characters)", state.config.max_content_chars),
+            &format!("Comment too long (max {} characters)", state.config.limits.max_content_chars),
             t,
         )
         .await;
@@ -155,7 +155,7 @@ pub async fn board_post(
         return render_board_error(&state, board, "Thread must have a subject or comment", t).await;
     }
 
-    let ip_hash = hash_ip(&client_ip, &state.config.ip_salt);
+    let ip_hash = hash_ip(&client_ip, &state.config.site.ip_salt);
 
     let result = sqlx::query(
         "INSERT INTO threads (board_id, subject, content, image_path, ip_hash) VALUES (?, ?, ?, ?, ?)",
@@ -183,8 +183,8 @@ async fn render_board_error(
         board,
         boards: state.boards.clone(),
         threads,
-        site_name: state.config.site_name.clone(),
-        site_url: state.config.site_url.clone(),
+        site_name: state.config.site.name.clone(),
+        site_url: state.config.site.url.clone(),
         css_hash: state.css_hash.clone(),
         error: Some(error_msg.to_string()),
         t,
@@ -205,9 +205,10 @@ async fn fetch_board(state: &AppState, slug: &str) -> Result<Board, AppError> {
 async fn fetch_threads(state: &AppState, board_id: i64) -> Result<Vec<Thread>, AppError> {
     sqlx::query_as::<_, Thread>(
         "SELECT id, board_id, subject, content, image_path, ip_hash, created_at, bump_at, post_count
-         FROM threads WHERE board_id = ? ORDER BY bump_at DESC LIMIT 100",
+         FROM threads WHERE board_id = ? ORDER BY bump_at DESC LIMIT ?",
     )
     .bind(board_id)
+    .bind(state.config.limits.threads_per_board)
     .fetch_all(&state.pool)
     .await
     .map_err(Into::into)
