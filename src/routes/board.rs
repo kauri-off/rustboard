@@ -148,22 +148,12 @@ pub async fn board_post(
         }
     }
 
-    let image_path = match image_result {
-        Some(Ok(path)) => path,
+    let image_path: Option<String> = match image_result {
+        Some(Ok(path)) => Some(path),
         Some(Err(err_msg)) => {
             return render_board_error(&state, board, &err_msg, t, &site_name, &site_url).await;
         }
-        None => {
-            return render_board_error(
-                &state,
-                board,
-                "Thread requires an image",
-                t,
-                &site_name,
-                &site_url,
-            )
-            .await;
-        }
+        None => None,
     };
 
     if subject.chars().count() > max_subject_chars {
@@ -189,11 +179,22 @@ pub async fn board_post(
         .await;
     }
 
-    if content.trim().is_empty() && subject.trim().is_empty() {
+    if subject.trim().is_empty() {
         return render_board_error(
             &state,
             board,
-            "Thread must have a subject or comment",
+            "Thread must have a subject",
+            t,
+            &site_name,
+            &site_url,
+        )
+        .await;
+    }
+    if content.trim().is_empty() {
+        return render_board_error(
+            &state,
+            board,
+            "Thread must have a comment",
             t,
             &site_name,
             &site_url,

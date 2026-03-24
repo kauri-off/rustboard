@@ -23,19 +23,19 @@
     <form method="post" enctype="multipart/form-data" action="/{{ board.slug }}/">
       <table class="form-table">
         <tr>
-          <td><label for="subject">{{ t.subject }}</label></td>
-          <td><input type="text" id="subject" name="subject" maxlength="200" size="35"></td>
+          <td><label for="subject">{{ t.subject }} <span class="required">*</span></label></td>
+          <td><input type="text" id="subject" name="subject" maxlength="200" size="35" required></td>
         </tr>
         <tr>
-          <td><label for="content">{{ t.comment }}</label></td>
-          <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000"></textarea></td>
+          <td><label for="content">{{ t.comment }} <span class="required">*</span></label></td>
+          <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000" required></textarea></td>
         </tr>
         <tr>
-          <td><label for="image">{{ t.image }} <span class="required">*</span></label></td>
+          <td><label for="image">{{ t.image }}</label></td>
           <td>
             <input type="file" id="image" name="image"
-              accept="image/jpeg,image/png,image/gif,image/webp" required>
-            <span class="hint">jpg, png, gif, webp — max 5 MB</span>
+              accept="image/jpeg,image/png,image/gif,image/webp">
+            <span class="hint">{{ t.optional }} — jpg, png, gif, webp — max 5 MB</span>
           </td>
         </tr>
         <tr>
@@ -52,47 +52,54 @@
 {% if threads.is_empty() %}
 <p class="no-content">{{ t.no_threads }}</p>
 {% else %}
-<div class="thread-catalog">
-  {% for item in threads %}
-  <div class="catalog-thread">
-    <div class="catalog-image">
+{% for item in threads %}
+<div class="catalog-thread">
+  <div class="post op-post" id="thread-{{ item.thread.id }}">
+    {% match item.thread.image_path %}
+    {% when Some(img) %}
+    <div class="post-image op-image">
       <a href="/{{ board.slug }}/{{ item.thread.id }}">
-        <img src="/{{ item.thread.image_path }}" alt="Thread image" loading="lazy">
+        <img src="/{{ img }}" alt="Thread image" loading="lazy">
       </a>
     </div>
-    <div class="catalog-info">
+    {% when None %}
+    {% endmatch %}
+    <div class="post-header">
       {% if item.thread.subject.len() > 0 %}
-      <div class="thread-subject">
-        <a href="/{{ board.slug }}/{{ item.thread.id }}">{{ item.thread.subject }}</a>
-      </div>
+      <span class="post-subject"><a href="/{{ board.slug }}/{{ item.thread.id }}">{{ item.thread.subject }}</a></span>
       {% endif %}
-      <div class="thread-excerpt">{{ item.thread.content|truncate(120) }}</div>
-      <div class="thread-meta">
-        <a href="/{{ board.slug }}/{{ item.thread.id }}">
-          {{ item.thread.post_count }}
-          {% if t.lang_code == "ru" %}{{ item.thread.post_count|ru_post_form }}{% else %}post{% if item.thread.post_count != 1 %}s{% endif %}{% endif %}
-        </a>
-        — {{ item.thread.bump_at }}
-      </div>
-      {% if item.preview_posts.len() > 0 %}
-      <div class="thread-preview-posts">
-        {% for post in item.preview_posts %}
-        <div class="preview-post">
-          <span class="post-num">No.{{ post.id }}</span>
-          <span class="post-time">{{ post.created_at }}</span>
-          {% match post.image_path %}
-          {% when Some(img) %}
-          <a href="/{{ img }}" target="_blank" class="preview-post-img-link">[img]</a>
-          {% when None %}
-          {% endmatch %}
-          <span class="preview-post-content">{{ post.content|truncate(200) }}</span>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
+      <span class="post-num">No.{{ item.thread.id }}</span>
+      <span class="post-time">{{ item.thread.created_at }}</span>
+      <span class="thread-meta"><a href="/{{ board.slug }}/{{ item.thread.id }}">{{ item.thread.post_count }}
+        {% if t.lang_code == "ru" %}{{ item.thread.post_count|ru_post_form }}{% else %}post{% if item.thread.post_count != 1 %}s{% endif %}{% endif %}
+      </a> — {{ item.thread.bump_at }}</span>
     </div>
+    <div class="post-content">{{ item.thread.content|truncate(120) }}</div>
+    <div class="clearfix"></div>
+  </div>
+  {% let omitted = item.thread.post_count - item.preview_posts.len() as i64 - 1%}
+  {% if omitted > 0 %}
+  <p class="omitted">{{ omitted }}
+    {% if t.lang_code == "ru" %}{{ omitted|ru_post_form }}{% else %}repl{% if omitted != 1 %}ies{% else %}y{% endif %}{% endif %}
+    omitted. <a href="/{{ board.slug }}/{{ item.thread.id }}">Click to expand.</a></p>
+  {% endif %}
+  {% for post in item.preview_posts %}
+  <div class="post" id="post-{{ post.id }}">
+    <div class="post-header">
+      <span class="reply-arrow">>></span>
+      <span class="post-num">No.{{ post.id }}</span>
+      <span class="post-time">{{ post.created_at }}</span>
+      {% match post.image_path %}
+      {% when Some(img) %}
+      <a href="/{{ img }}" target="_blank" class="preview-post-img-link">[img]</a>
+      {% when None %}
+      {% endmatch %}
+    </div>
+    <div class="post-content">{{ post.content|truncate(200) }}</div>
   </div>
   {% endfor %}
 </div>
+<hr>
+{% endfor %}
 {% endif %}
 {% endblock %}

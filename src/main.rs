@@ -118,12 +118,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(routes::boards::board_list))
         .route(
             "/robots.txt",
-            get(|| async {
-                (
-                    [("content-type", "text/plain")],
-                    "User-agent: *\nAllow: /$\nAllow: /boards$\nDisallow: /\n",
-                )
-            }),
+            get(|| async { ([("content-type", "text/plain")], "User-agent: *\nAllow: /") }),
         )
         .route("/boards", get(routes::boards::board_list))
         .route(

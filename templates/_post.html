@@ -1,5 +1,6 @@
 <div class="post" id="post-{{ post.id }}">
   <div class="post-header">
+    <span class="reply-arrow">>></span>
     <span class="post-num">No.{{ post.id }}</span>
     <span class="post-time">{{ post.created_at }}</span>
     <span class="post-ip">{{ post.ip_hash }}</span>
@@ -13,5 +14,6 @@
   </div>
   {% when None %}
   {% endmatch %}
-  <div class="post-content">{{ post.content }}</div>
+  <div class="post-content">{{ post.content|format_post_content|safe }}</div>
+  <div class="clearfix"></div>
 </div>

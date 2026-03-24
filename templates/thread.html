@@ -9,7 +9,7 @@
 {% block og_description %}{{ thread.content|truncate(160) }}{% endblock %}
 {% block og_type %}article{% endblock %}
 {% block og_url %}{% if !site_url.is_empty() %}<meta property="og:url" content="{{ site_url }}/{{ board.slug }}/{{ thread.id }}">{% endif %}{% endblock %}
-{% block og_image %}{% if !site_url.is_empty() %}<meta property="og:image" content="{{ site_url }}/{{ thread.image_path }}">{% endif %}{% endblock %}
+{% block og_image %}{% match thread.image_path %}{% when Some(img) %}{% if !site_url.is_empty() %}<meta property="og:image" content="{{ site_url }}/{{ img }}">{% endif %}{% when None %}{% endmatch %}{% endblock %}
 
 {% block content %}
 <div class="thread-nav">
@@ -19,6 +19,15 @@
 <div class="thread">
   <!-- OP post -->
   <div class="post op-post" id="post-{{ thread.id }}">
+    {% match thread.image_path %}
+    {% when Some(img) %}
+    <div class="post-image op-image">
+      <a href="/{{ img }}" target="_blank">
+        <img src="/{{ img }}" alt="OP image">
+      </a>
+    </div>
+    {% when None %}
+    {% endmatch %}
     <div class="post-header">
       {% if thread.subject.len() > 0 %}
       <span class="post-subject">{{ thread.subject }}</span>
@@ -27,18 +36,15 @@
       <span class="post-time">{{ thread.created_at }}</span>
       <span class="post-ip">{{ thread.ip_hash }}</span>
     </div>
-    <div class="post-image op-image">
-      <a href="/{{ thread.image_path }}" target="_blank">
-        <img src="/{{ thread.image_path }}" alt="OP image">
-      </a>
-    </div>
-    <div class="post-content">{{ thread.content }}</div>
+    <div class="post-content">{{ thread.content|format_post_content|safe }}</div>
+    <div class="clearfix"></div>
   </div>
 
   <!-- Replies -->
   {% for post in posts %}
   {% include "_post.html" %}
   {% endfor %}
+  <div class="clearfix"></div>
 </div>
 
 <div class="reply-form">
@@ -52,7 +58,7 @@
     <table class="form-table">
       <tr>
         <td><label for="content">{{ t.comment }}</label></td>
-        <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000" required></textarea></td>
+        <td><textarea id="content" name="content" rows="5" cols="35" maxlength="2000"></textarea></td>
       </tr>
       <tr>
         <td><label for="image">{{ t.image }}</label></td>

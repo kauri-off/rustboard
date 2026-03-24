@@ -166,13 +166,13 @@ pub async fn thread_post(
         .await;
     }
 
-    if content.trim().is_empty() {
+    if content.trim().is_empty() && image_path.is_none() {
         return render_thread_error(
             &state,
             board,
             thread,
             posts,
-            "Reply must have content",
+            "Reply must have content or an image",
             t,
             &site_name,
             &site_url,

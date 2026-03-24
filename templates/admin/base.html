@@ -8,7 +8,7 @@
 </head>
 <body class="admin-body">
   <div class="admin-layout">
-    <nav class="admin-sidebar">
+    <aside class="admin-sidebar">
       <div class="admin-sidebar-title">Admin Panel</div>
       <a href="/admin/dashboard">Dashboard</a>
       <a href="/admin/boards">Boards</a>
@@ -19,7 +19,7 @@
       <form method="post" action="/admin/logout" style="margin-top:auto;padding-top:1em;">
         <button type="submit" class="admin-logout-btn">Log out</button>
       </form>
-    </nav>
+    </aside>
     <main class="admin-content">
       {% block content %}{% endblock %}
     </main>

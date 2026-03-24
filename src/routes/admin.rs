@@ -266,7 +266,7 @@ pub async fn board_delete(
     }
 
     // Collect image paths before deletion (FK cascade will remove threads/posts)
-    let thread_images: Vec<String> =
+    let thread_images: Vec<Option<String>> =
         sqlx::query_scalar("SELECT image_path FROM threads WHERE board_id = ?")
             .bind(board_id)
             .fetch_all(&state.pool)
@@ -285,7 +285,7 @@ pub async fn board_delete(
         .await?;
 
     // Clean up uploaded files
-    for path in thread_images {
+    for path in thread_images.into_iter().flatten() {
         let _ = tokio::fs::remove_file(&path).await;
     }
     for path in post_images.into_iter().flatten() {
@@ -351,7 +351,7 @@ pub async fn thread_delete(
     }
 
     // Collect images before deletion
-    let thread_image: Option<String> =
+    let thread_image: Option<Option<String>> =
         sqlx::query_scalar("SELECT image_path FROM threads WHERE id = ?")
             .bind(thread_id)
             .fetch_optional(&state.pool)
@@ -368,7 +368,7 @@ pub async fn thread_delete(
         .execute(&state.pool)
         .await?;
 
-    if let Some(path) = thread_image {
+    if let Some(Some(path)) = thread_image {
         let _ = tokio::fs::remove_file(&path).await;
     }
     for path in post_images.into_iter().flatten() {

@@ -94,4 +94,68 @@ pub mod filters {
     pub fn ru_post_form(n: &i64, _: &dyn askama::Values) -> askama::Result<&'static str> {
         Ok(crate::i18n::ru_posts(*n))
     }
+
+    fn html_escape_str(s: &str) -> String {
+        let mut out = String::with_capacity(s.len());
+        for c in s.chars() {
+            match c {
+                '&' => out.push_str("&amp;"),
+                '<' => out.push_str("&lt;"),
+                '>' => out.push_str("&gt;"),
+                '"' => out.push_str("&quot;"),
+                '\'' => out.push_str("&#x27;"),
+                _ => out.push(c),
+            }
+        }
+        out
+    }
+
+    fn linkify_quotelinks(s: &str) -> String {
+        let needle = "&gt;&gt;";
+        let mut out = String::with_capacity(s.len());
+        let mut rest = s;
+        while let Some(pos) = rest.find(needle) {
+            out.push_str(&rest[..pos]);
+            let after = &rest[pos + needle.len()..];
+            let digit_end = after
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(after.len());
+            if digit_end > 0 {
+                let id = &after[..digit_end];
+                out.push_str("<a href=\"#post-");
+                out.push_str(id);
+                out.push_str("\" class=\"quotelink\">&gt;&gt;");
+                out.push_str(id);
+                out.push_str("</a>");
+                rest = &after[digit_end..];
+            } else {
+                out.push_str(needle);
+                rest = after;
+            }
+        }
+        out.push_str(rest);
+        out
+    }
+
+    #[askama::filter_fn]
+    pub fn format_post_content(s: &str, _: &dyn askama::Values) -> askama::Result<String> {
+        let mut out = String::with_capacity(s.len() * 2);
+        let mut first = true;
+        for line in s.lines() {
+            if !first {
+                out.push('\n');
+            }
+            first = false;
+            let escaped = html_escape_str(line);
+            let processed = linkify_quotelinks(&escaped);
+            if escaped.starts_with("&gt;") {
+                out.push_str("<span class=\"greentext\">");
+                out.push_str(&processed);
+                out.push_str("</span>");
+            } else {
+                out.push_str(&processed);
+            }
+        }
+        Ok(out)
+    }
 }
