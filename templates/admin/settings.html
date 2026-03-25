@@ -4,7 +4,6 @@
 
 {% block content %}
 <h1>Settings</h1>
-<p class="admin-hint">Changes take effect immediately — no restart required.</p>
 
 {% match success %}
 {% when Some(s) %}
@@ -19,10 +18,38 @@
 {% endmatch %}
 
 <form method="post" action="/admin/settings" class="admin-form">
+  <h2>Server</h2>
+  <p class="admin-hint admin-hint-warn">Changing these fields will restart the server.</p>
+  <div class="admin-form-row">
+    <label for="bind_addr">Bind Address</label>
+    <input type="text" id="bind_addr" name="bind_addr" value="{{ bind_addr }}" required>
+    <span class="admin-hint">e.g. 0.0.0.0:3000</span>
+  </div>
+  <div class="admin-form-row">
+    <label for="log_level">Log Level</label>
+    <input type="text" id="log_level" name="log_level" value="{{ log_level }}" required>
+    <span class="admin-hint">trace, debug, info, warn, error</span>
+  </div>
+
   <h2>Site</h2>
   <div class="admin-form-row">
     <label for="site_name">Site Name</label>
     <input type="text" id="site_name" name="site_name" value="{{ site_name }}" required>
+  </div>
+  <div class="admin-form-row">
+    <label for="site_url">Site URL</label>
+    <input type="text" id="site_url" name="site_url" value="{{ site_url }}">
+    <span class="admin-hint">Used for OG meta tags, e.g. https://example.com</span>
+  </div>
+
+  <h2>Admin Credentials</h2>
+  <div class="admin-form-row">
+    <label for="admin_username">Username</label>
+    <input type="text" id="admin_username" name="admin_username" value="{{ admin_username }}" required autocomplete="username">
+  </div>
+  <div class="admin-form-row">
+    <label for="admin_password">Password</label>
+    <input type="password" id="admin_password" name="admin_password" placeholder="Leave blank to keep current" autocomplete="new-password">
   </div>
 
   <h2>Limits</h2>

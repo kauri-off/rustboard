@@ -78,7 +78,11 @@ pub struct AdminPostsTemplate {
 #[derive(Template)]
 #[template(path = "admin/settings.html")]
 pub struct AdminSettingsTemplate {
+    pub bind_addr: String,
+    pub log_level: String,
     pub site_name: String,
+    pub site_url: String,
+    pub admin_username: String,
     pub threads_per_board: u32,
     pub post_cooldown_secs: u64,
     pub max_image_bytes: usize,

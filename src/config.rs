@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct AppConfig {
     #[serde(default)]
     pub server: ServerConfig,
@@ -16,7 +16,7 @@ pub struct AppConfig {
     pub admin: AdminConfig,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ServerConfig {
     #[serde(default = "default_bind_addr")]
     pub bind_addr: String,
@@ -24,7 +24,7 @@ pub struct ServerConfig {
     pub log_level: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct DatabaseConfig {
     #[serde(default = "default_database_url")]
     pub url: String,
@@ -32,7 +32,7 @@ pub struct DatabaseConfig {
     pub upload_dir: PathBuf,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct SiteConfig {
     #[serde(default = "default_site_name")]
     pub name: String,
@@ -42,7 +42,7 @@ pub struct SiteConfig {
     pub ip_salt: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct LimitsConfig {
     #[serde(default = "default_max_image_bytes")]
     pub max_image_bytes: usize,
@@ -60,7 +60,7 @@ pub struct LimitsConfig {
     pub threads_per_board: u32,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct AdminConfig {
     #[serde(default = "default_admin_username")]
     pub username: String,
@@ -178,11 +178,12 @@ const DEFAULT_SALTS: &[&str] = &[
 ];
 
 impl AppConfig {
-    pub fn load() -> anyhow::Result<Self> {
-        let path = config_path_from_args().unwrap_or_else(|| "config.toml".to_string());
+    pub fn load() -> anyhow::Result<(Self, std::path::PathBuf)> {
+        let path_str = config_path_from_args().unwrap_or_else(|| "config.toml".to_string());
+        let path = std::path::PathBuf::from(&path_str);
         let text = std::fs::read_to_string(&path).map_err(|_| {
             anyhow::anyhow!(
-                "Could not read {path}. Create one in the working directory.\n\
+                "Could not read {path_str}. Create one in the working directory.\n\
                  See the README for a full example."
             )
         })?;
@@ -224,6 +225,14 @@ impl AppConfig {
             std::process::exit(1);
         }
 
-        Ok(config)
+        Ok((config, path))
+    }
+
+    pub fn save(&self, path: &std::path::Path) -> anyhow::Result<()> {
+        let text = toml::to_string_pretty(self)
+            .map_err(|e| anyhow::anyhow!("Failed to serialize config: {e}"))?;
+        std::fs::write(path, text)
+            .map_err(|e| anyhow::anyhow!("Failed to write {}: {e}", path.display()))?;
+        Ok(())
     }
 }

@@ -53,7 +53,12 @@ pub struct CreateBoardForm {
 
 #[derive(Deserialize)]
 pub struct SettingsForm {
+    bind_addr: String,
+    log_level: String,
     site_name: String,
+    site_url: String,
+    admin_username: String,
+    admin_password: String, // empty = keep existing
     threads_per_board: u32,
     post_cooldown_secs: u64,
     max_image_bytes: usize,
@@ -413,32 +418,18 @@ pub async fn settings_get(
         return Ok(r);
     }
 
-    let (
-        site_name,
-        threads_per_board,
-        post_cooldown_secs,
-        max_image_bytes,
-        max_subject_chars,
-        max_content_chars,
-    ) = {
-        let cfg = state.config.read().await;
-        (
-            cfg.site.name.clone(),
-            cfg.limits.threads_per_board,
-            cfg.limits.post_cooldown_secs,
-            cfg.limits.max_image_bytes,
-            cfg.limits.max_subject_chars,
-            cfg.limits.max_content_chars,
-        )
-    };
-
+    let cfg = state.config.read().await;
     let html = AdminSettingsTemplate {
-        site_name,
-        threads_per_board,
-        post_cooldown_secs,
-        max_image_bytes,
-        max_subject_chars,
-        max_content_chars,
+        bind_addr: cfg.server.bind_addr.clone(),
+        log_level: cfg.server.log_level.clone(),
+        site_name: cfg.site.name.clone(),
+        site_url: cfg.site.url.clone(),
+        admin_username: cfg.admin.username.clone(),
+        threads_per_board: cfg.limits.threads_per_board,
+        post_cooldown_secs: cfg.limits.post_cooldown_secs,
+        max_image_bytes: cfg.limits.max_image_bytes,
+        max_subject_chars: cfg.limits.max_subject_chars,
+        max_content_chars: cfg.limits.max_content_chars,
         error: None,
         success: None,
         css_hash: state.css_hash.clone(),
@@ -458,11 +449,38 @@ pub async fn settings_post(
         return Ok(r);
     }
 
+    let bind_addr = form.bind_addr.trim().to_string();
     let site_name = form.site_name.trim().to_string();
-    if site_name.is_empty() {
-        let cfg = state.config.read().await;
+    let admin_username = form.admin_username.trim().to_string();
+
+    if bind_addr.parse::<std::net::SocketAddr>().is_err() {
         let html = AdminSettingsTemplate {
-            site_name: cfg.site.name.clone(),
+            bind_addr: bind_addr.clone(),
+            log_level: form.log_level.clone(),
+            site_name: site_name.clone(),
+            site_url: form.site_url.clone(),
+            admin_username: admin_username.clone(),
+            threads_per_board: form.threads_per_board,
+            post_cooldown_secs: form.post_cooldown_secs,
+            max_image_bytes: form.max_image_bytes,
+            max_subject_chars: form.max_subject_chars,
+            max_content_chars: form.max_content_chars,
+            error: Some("Invalid bind address (e.g. 0.0.0.0:3000).".to_string()),
+            success: None,
+            css_hash: state.css_hash.clone(),
+        }
+        .render()
+        .map_err(|e| AppError::Internal(e.into()))?;
+        return Ok(Html(html).into_response());
+    }
+
+    if site_name.is_empty() {
+        let html = AdminSettingsTemplate {
+            bind_addr: bind_addr.clone(),
+            log_level: form.log_level.clone(),
+            site_name: site_name.clone(),
+            site_url: form.site_url.clone(),
+            admin_username: admin_username.clone(),
             threads_per_board: form.threads_per_board,
             post_cooldown_secs: form.post_cooldown_secs,
             max_image_bytes: form.max_image_bytes,
@@ -477,36 +495,84 @@ pub async fn settings_post(
         return Ok(Html(html).into_response());
     }
 
-    // Save to DB
-    let pairs = [
-        ("site_name", site_name.clone()),
-        ("threads_per_board", form.threads_per_board.to_string()),
-        ("post_cooldown_secs", form.post_cooldown_secs.to_string()),
-        ("max_image_bytes", form.max_image_bytes.to_string()),
-        ("max_subject_chars", form.max_subject_chars.to_string()),
-        ("max_content_chars", form.max_content_chars.to_string()),
-    ];
-    for (key, value) in &pairs {
-        sqlx::query("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-            .bind(key)
-            .bind(value)
-            .execute(&state.pool)
-            .await?;
+    if admin_username.is_empty() {
+        let html = AdminSettingsTemplate {
+            bind_addr: bind_addr.clone(),
+            log_level: form.log_level.clone(),
+            site_name: site_name.clone(),
+            site_url: form.site_url.clone(),
+            admin_username: admin_username.clone(),
+            threads_per_board: form.threads_per_board,
+            post_cooldown_secs: form.post_cooldown_secs,
+            max_image_bytes: form.max_image_bytes,
+            max_subject_chars: form.max_subject_chars,
+            max_content_chars: form.max_content_chars,
+            error: Some("Admin username cannot be empty.".to_string()),
+            success: None,
+            css_hash: state.css_hash.clone(),
+        }
+        .render()
+        .map_err(|e| AppError::Internal(e.into()))?;
+        return Ok(Html(html).into_response());
     }
 
-    // Apply to in-memory config
+    // Detect if restart-required fields changed
+    let needs_restart = {
+        let cfg = state.config.read().await;
+        bind_addr != cfg.server.bind_addr || form.log_level != cfg.server.log_level
+    };
+
+    // Apply all changes and write TOML
     {
         let mut cfg = state.config.write().await;
+        cfg.server.bind_addr = bind_addr.clone();
+        cfg.server.log_level = form.log_level.clone();
         cfg.site.name = site_name.clone();
+        cfg.site.url = form.site_url.clone();
         cfg.limits.threads_per_board = form.threads_per_board;
         cfg.limits.post_cooldown_secs = form.post_cooldown_secs;
         cfg.limits.max_image_bytes = form.max_image_bytes;
         cfg.limits.max_subject_chars = form.max_subject_chars;
         cfg.limits.max_content_chars = form.max_content_chars;
+        cfg.admin.username = admin_username.clone();
+        if !form.admin_password.is_empty() {
+            cfg.admin.password = form.admin_password.clone();
+        }
+        cfg.save(&state.config_path)
+            .map_err(|e| AppError::Internal(e))?;
+    }
+
+    // Update rate limiter cooldown in-place (no restart needed)
+    state.rate_limiter.set_cooldown(form.post_cooldown_secs);
+
+    if needs_restart {
+        state.shutdown_tx.send(true).ok();
+        let html = AdminSettingsTemplate {
+            bind_addr: bind_addr.clone(),
+            log_level: form.log_level.clone(),
+            site_name: site_name.clone(),
+            site_url: form.site_url.clone(),
+            admin_username: admin_username.clone(),
+            threads_per_board: form.threads_per_board,
+            post_cooldown_secs: form.post_cooldown_secs,
+            max_image_bytes: form.max_image_bytes,
+            max_subject_chars: form.max_subject_chars,
+            max_content_chars: form.max_content_chars,
+            error: None,
+            success: Some("Settings saved. Server is restarting...".to_string()),
+            css_hash: state.css_hash.clone(),
+        }
+        .render()
+        .map_err(|e| AppError::Internal(e.into()))?;
+        return Ok(Html(html).into_response());
     }
 
     let html = AdminSettingsTemplate {
-        site_name,
+        bind_addr: bind_addr.clone(),
+        log_level: form.log_level.clone(),
+        site_name: site_name.clone(),
+        site_url: form.site_url.clone(),
+        admin_username: admin_username.clone(),
         threads_per_board: form.threads_per_board,
         post_cooldown_secs: form.post_cooldown_secs,
         max_image_bytes: form.max_image_bytes,

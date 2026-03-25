@@ -29,16 +29,18 @@ use rate_limit::{LoginRateLimiter, RateLimiter};
 pub struct AppState {
     pub pool: sqlx::SqlitePool,
     pub config: RwLock<AppConfig>,
+    pub config_path: std::path::PathBuf,
     pub boards: RwLock<Vec<Board>>,
     pub rate_limiter: RateLimiter,
     pub login_rate_limiter: LoginRateLimiter,
     pub css_hash: String,
     pub admin_sessions: Mutex<HashMap<String, Instant>>,
+    pub shutdown_tx: tokio::sync::watch::Sender<bool>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut config = AppConfig::load()?;
+    let (config, config_path) = AppConfig::load()?;
 
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::new(&config.server.log_level))
@@ -83,9 +85,6 @@ async fn main() -> anyhow::Result<()> {
     let pool = db::create_pool(&config.database.url).await?;
     db::run_migrations(&pool).await?;
 
-    // Load settings from DB (overrides config.toml for admin-editable fields)
-    apply_db_settings(&mut config, &pool).await?;
-
     let boards =
         sqlx::query_as::<_, Board>("SELECT id, slug, name, description FROM boards ORDER BY id")
             .fetch_all(&pool)
@@ -103,14 +102,18 @@ async fn main() -> anyhow::Result<()> {
     let upload_dir = config.database.upload_dir.clone();
     let bind_addr = config.server.bind_addr.clone();
 
+    let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
+
     let state = Arc::new(AppState {
         pool,
         config: RwLock::new(config),
+        config_path,
         boards: RwLock::new(boards),
         rate_limiter: RateLimiter::new(cooldown),
         login_rate_limiter: LoginRateLimiter::new(),
         css_hash,
         admin_sessions: Mutex::new(HashMap::new()),
+        shutdown_tx,
     });
 
     let app = Router::new()
@@ -168,7 +171,7 @@ async fn main() -> anyhow::Result<()> {
             ),
         )
         .layer(logging)
-        .with_state(state);
+        .with_state(Arc::clone(&state));
 
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
     tracing::info!("Listening on http://{bind_addr}");
@@ -177,79 +180,22 @@ async fn main() -> anyhow::Result<()> {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(async move {
+        loop {
+            shutdown_rx.changed().await.ok();
+            if *shutdown_rx.borrow() {
+                break;
+            }
+        }
+    })
     .await?;
 
-    Ok(())
-}
-
-pub async fn apply_db_settings(
-    config: &mut AppConfig,
-    pool: &sqlx::SqlitePool,
-) -> anyhow::Result<()> {
-    let rows: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
-        .fetch_all(pool)
-        .await?;
-    let map: HashMap<String, String> = rows.into_iter().collect();
-
-    // Apply DB values to config
-    if let Some(v) = map.get("site_name") {
-        config.site.name = v.clone();
-    }
-    if let Some(v) = map.get("threads_per_board") {
-        if let Ok(n) = v.parse() {
-            config.limits.threads_per_board = n;
-        }
-    }
-    if let Some(v) = map.get("post_cooldown_secs") {
-        if let Ok(n) = v.parse() {
-            config.limits.post_cooldown_secs = n;
-        }
-    }
-    if let Some(v) = map.get("max_image_bytes") {
-        if let Ok(n) = v.parse() {
-            config.limits.max_image_bytes = n;
-        }
-    }
-    if let Some(v) = map.get("max_subject_chars") {
-        if let Ok(n) = v.parse() {
-            config.limits.max_subject_chars = n;
-        }
-    }
-    if let Some(v) = map.get("max_content_chars") {
-        if let Ok(n) = v.parse() {
-            config.limits.max_content_chars = n;
-        }
-    }
-
-    // Write config values to DB for any missing settings
-    let defaults = [
-        ("site_name", config.site.name.clone()),
-        (
-            "threads_per_board",
-            config.limits.threads_per_board.to_string(),
-        ),
-        (
-            "post_cooldown_secs",
-            config.limits.post_cooldown_secs.to_string(),
-        ),
-        ("max_image_bytes", config.limits.max_image_bytes.to_string()),
-        (
-            "max_subject_chars",
-            config.limits.max_subject_chars.to_string(),
-        ),
-        (
-            "max_content_chars",
-            config.limits.max_content_chars.to_string(),
-        ),
-    ];
-    for (key, value) in defaults {
-        if !map.contains_key(key) {
-            sqlx::query("INSERT INTO settings (key, value) VALUES (?, ?)")
-                .bind(key)
-                .bind(value)
-                .execute(pool)
-                .await?;
-        }
+    // If restart was requested, re-execute the binary with the same arguments
+    if *state.shutdown_tx.borrow() {
+        let exe = std::env::current_exe()?;
+        std::process::Command::new(&exe)
+            .args(std::env::args().skip(1))
+            .spawn()?;
     }
 
     Ok(())
